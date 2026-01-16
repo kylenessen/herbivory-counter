@@ -1,1 +1,9 @@
 .DS_Store
+node_modules/
+dist/
+out/
+*.log
+.vite/
+test-results/
+playwright-report/
+coverage/

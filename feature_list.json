@@ -11,7 +11,7 @@
                 "Window appears with title 'Herbivory Counter'",
                 "No console errors on startup"
             ],
-            "passes": false
+            "passes": true
         },
         {
             "id": "1.2",
