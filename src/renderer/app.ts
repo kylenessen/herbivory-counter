@@ -35,11 +35,13 @@ declare global {
         scaleLine: ScaleLine | null
         scaleValue: ScaleValue | null
         polygonVertices: Point[]
+        polygonClosed: boolean
     }
 }
 window.scaleLine = null
 window.scaleValue = null
 window.polygonVertices = []
+window.polygonClosed = false
 
 // Get DOM elements
 const openFolderBtn = document.getElementById('open-folder-btn')
@@ -146,7 +148,7 @@ function openImageViewer(image: ImageInfo): void {
             </div>
             <div class="polygon-section" id="polygon-section" style="display: none;">
                 <p data-testid="polygon-instruction" class="polygon-instruction">
-                    Click on the image to add polygon vertices.
+                    Click on the image to add polygon vertices. Click near the first vertex to close the polygon.
                 </p>
                 <button class="btn btn-secondary" id="clear-polygon-btn">Clear Polygon</button>
             </div>
@@ -354,10 +356,15 @@ function initializePolygonTool(canvas: HTMLCanvasElement, image: HTMLImageElemen
     }
 
     window.polygonVertices = []
+    window.polygonClosed = false
 
     currentPolygonTool = new PolygonTool(canvas)
     currentPolygonTool.setOnVerticesChanged((vertices) => {
         window.polygonVertices = vertices
+        renderPolygonCanvasOnce()
+    })
+    currentPolygonTool.setOnClosedChanged((closed) => {
+        window.polygonClosed = closed
         renderPolygonCanvasOnce()
     })
 
@@ -479,6 +486,7 @@ function closeImageViewer(): void {
     }
     window.scaleLine = null
     window.polygonVertices = []
+    window.polygonClosed = false
     if (currentPolygonTool) {
         currentPolygonTool.destroy()
         currentPolygonTool = null

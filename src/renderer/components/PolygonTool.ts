@@ -1,12 +1,15 @@
 import { Point } from '../../shared/types'
 
 export const VERTEX_RADIUS = 6
+export const CLOSE_DISTANCE_PX = 10
 
 export class PolygonTool {
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
   private vertices: Point[] = []
+  private closed = false
   private onVerticesChanged: ((vertices: Point[]) => void) | null = null
+  private onClosedChanged: ((closed: boolean) => void) | null = null
   private onClickBound: (event: MouseEvent) => void
 
   constructor(canvas: HTMLCanvasElement) {
@@ -27,12 +30,22 @@ export class PolygonTool {
     this.onVerticesChanged = callback
   }
 
+  public setOnClosedChanged(callback: (closed: boolean) => void): void {
+    this.onClosedChanged = callback
+  }
+
   public getVertices(): Point[] {
     return [...this.vertices]
   }
 
+  public isClosed(): boolean {
+    return this.closed
+  }
+
   public clear(): void {
     this.vertices = []
+    this.closed = false
+    this.onClosedChanged?.(this.closed)
     this.onVerticesChanged?.(this.getVertices())
   }
 
@@ -45,7 +58,23 @@ export class PolygonTool {
   }
 
   private handleClick(event: MouseEvent): void {
+    if (this.closed) return
+
     const pos = this.getMousePosition(event)
+
+    if (this.vertices.length >= 3) {
+      const first = this.vertices[0]
+      const dx = pos.x - first.x
+      const dy = pos.y - first.y
+      const distSq = dx * dx + dy * dy
+      if (distSq <= CLOSE_DISTANCE_PX * CLOSE_DISTANCE_PX) {
+        this.closed = true
+        this.onClosedChanged?.(this.closed)
+        this.onVerticesChanged?.(this.getVertices())
+        return
+      }
+    }
+
     this.vertices.push(pos)
     this.onVerticesChanged?.(this.getVertices())
   }
@@ -56,12 +85,17 @@ export class PolygonTool {
 
     ctx.save()
 
-    // Draw polyline (open polygon)
+    // Draw polyline / polygon outline
     if (this.vertices.length >= 2) {
       ctx.beginPath()
       ctx.moveTo(this.vertices[0].x, this.vertices[0].y)
       for (let i = 1; i < this.vertices.length; i++) {
         ctx.lineTo(this.vertices[i].x, this.vertices[i].y)
+      }
+      if (this.closed && this.vertices.length >= 3) {
+        ctx.closePath()
+        ctx.fillStyle = 'rgba(255, 107, 107, 0.25)'
+        ctx.fill()
       }
       ctx.strokeStyle = '#ff6b6b'
       ctx.lineWidth = 2
@@ -83,4 +117,3 @@ export class PolygonTool {
     ctx.restore()
   }
 }
-

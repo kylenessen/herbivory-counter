@@ -115,14 +115,22 @@ This file tracks work completed by each agent session. Read this to understand p
 - Updated npm scripts to handle `ELECTRON_RUN_AS_NODE` and rebuild `better-sqlite3` for node/electron as needed
 - Commits: feat(polygon-tool): implement feature 3.1 - point-and-click vertex placement
 
+### 2026-01-16 - Feature 3.2 Implementation Session
+- Implemented polygon closing by clicking within 10px of the first vertex
+- Closed polygons render filled with semi-transparent color and stop accepting new vertices
+- Exposed `window.polygonClosed` for E2E verification
+- Added Playwright E2E test for closing behavior and captured screenshot saved to screenshots/3.2.png
+- Marked feature 3.2 as passes: true in feature_list.json
+- Commits: feat(polygon-tool): implement feature 3.2 - polygon closing
+
 ---
 
 ## Current State
 - Project: Initialized with electron-vite, TypeScript, SQLite
-- Features complete: 7 / 44
-- Last feature worked on: 3.1
+- Features complete: 9 / 42
+- Last feature worked on: 3.2
 - Known issues: Better-sqlite3 requires electron-rebuild before E2E tests, npm rebuild after for unit tests
 
 ## Next Priority
 Continue with Phase 3 polygon drawing:
-1. Task 3.2: Polygon Closing - close polygon by clicking near first vertex
+1. Task 3.3: Vertex Movement - drag existing vertices to adjust polygon shape

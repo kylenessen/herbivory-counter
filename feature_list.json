@@ -105,7 +105,7 @@
                 "Polygon closes and fills with semi-transparent color",
                 "No more vertices can be added to this polygon"
             ],
-            "passes": false
+            "passes": true
         },
         {
             "id": "3.3",

@@ -26,6 +26,16 @@ test.beforeAll(async () => {
 
   await page.waitForSelector('[data-testid="open-folder"]', { state: 'visible', timeout: 10000 })
   await page.waitForFunction(() => typeof (window as any).electronAPI !== 'undefined')
+
+  await stubDialog(electronApp, 'showOpenDialog', {
+    canceled: false,
+    filePaths: [testDir]
+  })
+  await page.click('[data-testid="open-folder"]')
+  await page.waitForSelector('#image-grid', { state: 'visible', timeout: 10000 })
+
+  await page.click('.image-thumbnail:first-child')
+  await page.waitForSelector('#image-viewer', { state: 'visible', timeout: 5000 })
 })
 
 test.afterAll(async () => {
@@ -36,20 +46,9 @@ test.afterAll(async () => {
 })
 
 test.describe('Feature 3.1: User can place polygon vertices by clicking', () => {
-  test.beforeAll(async () => {
-    await stubDialog(electronApp, 'showOpenDialog', {
-      canceled: false,
-      filePaths: [testDir]
-    })
-    await page.click('[data-testid="open-folder"]')
-    await page.waitForSelector('#image-grid', { state: 'visible', timeout: 10000 })
-
-    await page.click('.image-thumbnail:first-child')
-    await page.waitForSelector('#image-viewer', { state: 'visible', timeout: 5000 })
-  })
-
   test('clicking adds vertices to polygon', async () => {
     await page.click('[data-testid="polygon-mode-btn"]')
+    await page.click('#clear-polygon-btn')
 
     const canvas = page.locator('[data-testid="polygon-canvas"]')
     await expect(canvas).toBeVisible()
@@ -60,7 +59,33 @@ test.describe('Feature 3.1: User can place polygon vertices by clicking', () => 
 
     const vertices = await page.evaluate(() => (window as any).polygonVertices)
     expect(vertices).toHaveLength(3)
+  })
+})
 
-    await page.screenshot({ path: resolve(__dirname, '../../screenshots/3.1.png') })
+test.describe('Feature 3.2: Polygon closes when clicking near first vertex', () => {
+  test('clicking near first vertex closes polygon and prevents adding more points', async () => {
+    await page.click('[data-testid="polygon-mode-btn"]')
+    await page.click('#clear-polygon-btn')
+
+    const canvas = page.locator('[data-testid="polygon-canvas"]')
+    await expect(canvas).toBeVisible()
+
+    await canvas.click({ position: { x: 100, y: 100 } })
+    await canvas.click({ position: { x: 200, y: 100 } })
+    await canvas.click({ position: { x: 150, y: 200 } })
+
+    await canvas.click({ position: { x: 102, y: 98 } })
+
+    const closed = await page.evaluate(() => (window as any).polygonClosed)
+    expect(closed).toBe(true)
+
+    const verticesAfterClose = await page.evaluate(() => (window as any).polygonVertices)
+    expect(verticesAfterClose).toHaveLength(3)
+
+    await canvas.click({ position: { x: 250, y: 250 } })
+    const verticesAfterExtraClick = await page.evaluate(() => (window as any).polygonVertices)
+    expect(verticesAfterExtraClick).toHaveLength(3)
+
+    await page.screenshot({ path: resolve(__dirname, '../../screenshots/3.2.png') })
   })
 })
