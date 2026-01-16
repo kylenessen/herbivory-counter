@@ -123,14 +123,24 @@ This file tracks work completed by each agent session. Read this to understand p
 - Marked feature 3.2 as passes: true in feature_list.json
 - Commits: feat(polygon-tool): implement feature 3.2 - polygon closing
 
+### 2026-01-16 - Feature 3.3 Implementation Session
+- Implemented vertex dragging for polygon editing (works for both open and closed polygons)
+- Hovering a vertex updates cursor to `move`
+- Prevented accidental vertex creation after drag by suppressing the next click event
+- Prevented clicks on existing vertices from adding duplicate points
+- Added Playwright E2E tests for vertex movement and captured screenshot saved to screenshots/3.3.png
+- Unit tests: 37 passing | Playwright (polygon-tool.spec.ts): 4 passing
+- Marked feature 3.3 as passes: true in feature_list.json
+- Commits: feat(polygon-tool): implement feature 3.3 - vertex movement
+
 ---
 
 ## Current State
 - Project: Initialized with electron-vite, TypeScript, SQLite
-- Features complete: 9 / 42
-- Last feature worked on: 3.2
+- Features complete: 10 / 42
+- Last feature worked on: 3.3
 - Known issues: Better-sqlite3 requires electron-rebuild before E2E tests, npm rebuild after for unit tests
 
 ## Next Priority
 Continue with Phase 3 polygon drawing:
-1. Task 3.3: Vertex Movement - drag existing vertices to adjust polygon shape
+1. Task 3.4: Vertex Deletion - delete individual vertices

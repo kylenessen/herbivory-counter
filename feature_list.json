@@ -117,7 +117,7 @@
                 "Drag vertex to new position",
                 "Polygon updates in real-time"
             ],
-            "passes": false
+            "passes": true
         },
         {
             "id": "3.4",

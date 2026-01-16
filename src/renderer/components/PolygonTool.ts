@@ -2,15 +2,25 @@ import { Point } from '../../shared/types'
 
 export const VERTEX_RADIUS = 6
 export const CLOSE_DISTANCE_PX = 10
+const DRAG_START_THRESHOLD_PX = 2
+const DEFAULT_CURSOR = 'crosshair'
 
 export class PolygonTool {
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
   private vertices: Point[] = []
   private closed = false
+  private dragCandidateIndex: number | null = null
+  private draggingIndex: number | null = null
+  private dragStartPos: Point | null = null
+  private suppressNextClick = false
   private onVerticesChanged: ((vertices: Point[]) => void) | null = null
   private onClosedChanged: ((closed: boolean) => void) | null = null
   private onClickBound: (event: MouseEvent) => void
+  private onMouseDownBound: (event: MouseEvent) => void
+  private onMouseMoveBound: (event: MouseEvent) => void
+  private onMouseUpBound: (event: MouseEvent) => void
+  private onMouseLeaveBound: (event: MouseEvent) => void
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -19,11 +29,24 @@ export class PolygonTool {
     this.ctx = ctx
 
     this.onClickBound = this.handleClick.bind(this)
+    this.onMouseDownBound = this.handleMouseDown.bind(this)
+    this.onMouseMoveBound = this.handleMouseMove.bind(this)
+    this.onMouseUpBound = this.handleMouseUp.bind(this)
+    this.onMouseLeaveBound = this.handleMouseLeave.bind(this)
+
     this.canvas.addEventListener('click', this.onClickBound)
+    this.canvas.addEventListener('mousedown', this.onMouseDownBound)
+    this.canvas.addEventListener('mousemove', this.onMouseMoveBound)
+    this.canvas.addEventListener('mouseup', this.onMouseUpBound)
+    this.canvas.addEventListener('mouseleave', this.onMouseLeaveBound)
   }
 
   public destroy(): void {
     this.canvas.removeEventListener('click', this.onClickBound)
+    this.canvas.removeEventListener('mousedown', this.onMouseDownBound)
+    this.canvas.removeEventListener('mousemove', this.onMouseMoveBound)
+    this.canvas.removeEventListener('mouseup', this.onMouseUpBound)
+    this.canvas.removeEventListener('mouseleave', this.onMouseLeaveBound)
   }
 
   public setOnVerticesChanged(callback: (vertices: Point[]) => void): void {
@@ -45,8 +68,19 @@ export class PolygonTool {
   public clear(): void {
     this.vertices = []
     this.closed = false
+    this.dragCandidateIndex = null
+    this.draggingIndex = null
+    this.dragStartPos = null
+    this.suppressNextClick = false
+    this.setCursor(DEFAULT_CURSOR)
     this.onClosedChanged?.(this.closed)
     this.onVerticesChanged?.(this.getVertices())
+  }
+
+  private setCursor(cursor: string): void {
+    if (this.canvas.style.cursor !== cursor) {
+      this.canvas.style.cursor = cursor
+    }
   }
 
   private getMousePosition(event: MouseEvent): Point {
@@ -57,7 +91,91 @@ export class PolygonTool {
     }
   }
 
+  private findVertexIndexAtPosition(pos: Point, radiusPx = VERTEX_RADIUS): number {
+    const radiusSq = radiusPx * radiusPx
+    for (let i = 0; i < this.vertices.length; i++) {
+      const v = this.vertices[i]
+      const dx = pos.x - v.x
+      const dy = pos.y - v.y
+      if (dx * dx + dy * dy <= radiusSq) return i
+    }
+    return -1
+  }
+
+  private handleMouseDown(event: MouseEvent): void {
+    const pos = this.getMousePosition(event)
+    const idx = this.findVertexIndexAtPosition(pos)
+    if (idx !== -1) {
+      this.dragCandidateIndex = idx
+      this.dragStartPos = pos
+      this.setCursor('move')
+      return
+    }
+
+    this.dragCandidateIndex = null
+    this.dragStartPos = null
+  }
+
+  private handleMouseMove(event: MouseEvent): void {
+    const pos = this.getMousePosition(event)
+
+    if (this.draggingIndex !== null) {
+      this.vertices[this.draggingIndex] = pos
+      this.onVerticesChanged?.(this.getVertices())
+      this.setCursor('move')
+      return
+    }
+
+    if (this.dragCandidateIndex !== null && this.dragStartPos) {
+      const dx = pos.x - this.dragStartPos.x
+      const dy = pos.y - this.dragStartPos.y
+      if (dx * dx + dy * dy >= DRAG_START_THRESHOLD_PX * DRAG_START_THRESHOLD_PX) {
+        this.draggingIndex = this.dragCandidateIndex
+        this.dragCandidateIndex = null
+        this.vertices[this.draggingIndex] = pos
+        this.onVerticesChanged?.(this.getVertices())
+        this.setCursor('move')
+        return
+      }
+    }
+
+    const hoveredIndex = this.findVertexIndexAtPosition(pos)
+    this.setCursor(hoveredIndex !== -1 ? 'move' : DEFAULT_CURSOR)
+  }
+
+  private handleMouseUp(event: MouseEvent): void {
+    if (this.draggingIndex !== null) {
+      const pos = this.getMousePosition(event)
+      this.vertices[this.draggingIndex] = pos
+      this.draggingIndex = null
+      this.dragCandidateIndex = null
+      this.dragStartPos = null
+      this.suppressNextClick = true
+      this.onVerticesChanged?.(this.getVertices())
+      this.setCursor(DEFAULT_CURSOR)
+      return
+    }
+
+    this.dragCandidateIndex = null
+    this.dragStartPos = null
+  }
+
+  private handleMouseLeave(_event: MouseEvent): void {
+    this.dragCandidateIndex = null
+    this.dragStartPos = null
+    if (this.draggingIndex !== null) {
+      this.draggingIndex = null
+      this.onVerticesChanged?.(this.getVertices())
+    }
+    this.setCursor(DEFAULT_CURSOR)
+  }
+
   private handleClick(event: MouseEvent): void {
+    if (this.suppressNextClick) {
+      this.suppressNextClick = false
+      return
+    }
+
     if (this.closed) return
 
     const pos = this.getMousePosition(event)
@@ -74,6 +192,8 @@ export class PolygonTool {
         return
       }
     }
+
+    if (this.findVertexIndexAtPosition(pos) !== -1) return
 
     this.vertices.push(pos)
     this.onVerticesChanged?.(this.getVertices())
