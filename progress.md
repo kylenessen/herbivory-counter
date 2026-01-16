@@ -62,15 +62,32 @@ This file tracks work completed by each agent session. Read this to understand p
 - Marked feature 1.4 as passes: true in feature_list.json
 - Commits: feat(image-grid): implement feature 1.4 - image grid with thumbnails
 
+### 2026-01-16 - Feature 2.1 Implementation Session
+- Implemented ScaleTool component for drawing scale lines on canvas
+- Created comprehensive line drawing functionality with mouse events
+- Line endpoints are draggable after creation for fine-tuning
+- Added visual feedback: dashed line while drawing, solid line when complete
+- Line length displayed in pixels above the line
+- Added UI elements: instruction text, line length display, confirm/clear buttons
+- Exposed scaleLine state to window for E2E testing
+- Added CSS styles for canvas overlay and toolbar UI
+- Wrote 15 unit tests for line calculations and state management
+- Wrote 8 E2E tests covering all acceptance criteria
+- Unit tests: 28 passing | E2E tests: 19 passing
+- Captured screenshot saved to screenshots/2.1.png
+- Marked feature 2.1 as passes: true in feature_list.json
+- Added @electron/rebuild as dev dependency for native module management
+- Commits: feat(scale-tool): implement feature 2.1 - line drawing tool
+
 ---
 
 ## Current State
 - Project: Initialized with electron-vite, TypeScript, SQLite
-- Features complete: 4 / 44
-- Last feature worked on: 1.4
+- Features complete: 5 / 44
+- Last feature worked on: 2.1
 - Known issues: Better-sqlite3 requires electron-rebuild before E2E tests, npm rebuild after for unit tests
 
 ## Next Priority
 Continue with Phase 2 scale calibration:
-1. Task 2.1: Line Drawing Tool - Draw a line on scale ruler
+1. Task 2.2: Scale Input Dialog - Enter scale value in centimeters
 

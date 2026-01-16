@@ -57,7 +57,7 @@
                 "Line appears with draggable endpoints",
                 "Line persists until confirmed or canceled"
             ],
-            "passes": false
+            "passes": true
         },
         {
             "id": "2.2",
