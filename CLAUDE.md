@@ -7,7 +7,7 @@
 Every agent session MUST begin with:
 
 1. `pwd` - Verify working directory
-2. `cat progress.txt` - Read what previous sessions accomplished
+2. `cat progress.md` - Read what previous sessions accomplished
 3. `cat feature_list.json` - See which features pass/fail
 4. `git log --oneline -10` - Review recent commits
 5. If `init.sh` exists: Run it to start dev server
@@ -30,7 +30,7 @@ Every agent session MUST begin with:
 ### Leave Clean State
 - Commit after completing feature: `git commit -m "feat(component): description"`
 - Update `feature_list.json`: Change `"passes": false` to `"passes": true`
-- Update `progress.txt`: Add session summary with date and work done
+- Update `progress.md`: Add session summary with date and work done
 - Never leave uncommitted changes or broken tests
 
 ### Do Not Modify feature_list.json Structure
@@ -45,13 +45,13 @@ Every agent session MUST begin with:
 |------|---------|
 | `implementation_plan.md` | Detailed task specs with acceptance criteria |
 | `feature_list.json` | Feature status tracking (passes: true/false) |
-| `progress.txt` | Session handoff log |
+| `progress.md` | Session handoff log |
 | `task.md` | High-level task checklist |
 | `init.sh` | Bootstrap script (created in Task 1.1) |
 
 ## Session End Template
 
-Before ending, append to `progress.txt`:
+Before ending, append to `progress.md`:
 
 ```
 ### YYYY-MM-DD - Session Description
