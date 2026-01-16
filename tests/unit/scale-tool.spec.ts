@@ -5,6 +5,7 @@ import {
   isPointNear,
   createScaleLine,
   updateLineEndpoint,
+  calculateScale,
   ScaleLine
 } from '../../src/renderer/components/ScaleTool'
 
@@ -121,5 +122,49 @@ describe('Scale Tool - Drawing a line stores start and end coordinates', () => {
 
     expect(line.start).toEqual({ x: 100, y: 100 })
     expect(line.end).toEqual({ x: 300, y: 100 })
+  })
+})
+
+describe('Scale Tool - Feature 2.2: Scale Calculation', () => {
+  test('calculates pixels per cm from line and input', () => {
+    const lineLength = 450 // pixels
+    const cmValue = 10
+    const scale = calculateScale(lineLength, cmValue)
+    expect(scale).toBe(45) // px per cm
+  })
+
+  test('calculates scale with different values', () => {
+    const lineLength = 300 // pixels
+    const cmValue = 5
+    const scale = calculateScale(lineLength, cmValue)
+    expect(scale).toBe(60) // px per cm
+  })
+
+  test('handles decimal cm values', () => {
+    const lineLength = 450 // pixels
+    const cmValue = 10.5
+    const scale = calculateScale(lineLength, cmValue)
+    expect(scale).toBeCloseTo(42.857, 2)
+  })
+
+  test('handles small line lengths', () => {
+    const lineLength = 20 // pixels
+    const cmValue = 1
+    const scale = calculateScale(lineLength, cmValue)
+    expect(scale).toBe(20)
+  })
+
+  test('returns 0 for zero cm value', () => {
+    const lineLength = 450 // pixels
+    const cmValue = 0
+    const scale = calculateScale(lineLength, cmValue)
+    expect(scale).toBe(0)
+  })
+
+  test('returns 0 for negative cm value', () => {
+    const lineLength = 450 // pixels
+    const cmValue = -5
+    const scale = calculateScale(lineLength, cmValue)
+    expect(scale).toBe(0)
   })
 })

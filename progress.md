@@ -79,15 +79,31 @@ This file tracks work completed by each agent session. Read this to understand p
 - Added @electron/rebuild as dev dependency for native module management
 - Commits: feat(scale-tool): implement feature 2.1 - line drawing tool
 
+### 2026-01-16 - Feature 2.2 Implementation Session
+- Implemented scale input dialog for entering scale value in centimeters
+- Added `calculateScale` function to ScaleTool.ts that calculates pixels per cm from line length and cm value
+- Created modal dialog UI with input field (default 10 cm), confirm, and cancel buttons
+- Dialog appears when clicking "Confirm Scale Line" button after drawing a line
+- Scale value is calculated and displayed on screen after confirmation (e.g., "1 cm = 45 px")
+- Exposed `scaleValue` to window for E2E testing
+- Added CSS styles for dialog and scale display
+- Wrote 6 unit tests for scale calculation
+- Wrote 6 E2E tests for scale input dialog UI
+- Fixed E2E test setup to properly handle test state isolation
+- Unit tests: 34 passing | E2E tests: 25 passing
+- Captured screenshot saved to screenshots/2.2.png
+- Marked feature 2.2 as passes: true in feature_list.json
+- Commits: feat(scale-input): implement feature 2.2 - scale input dialog
+
 ---
 
 ## Current State
 - Project: Initialized with electron-vite, TypeScript, SQLite
-- Features complete: 5 / 44
-- Last feature worked on: 2.1
+- Features complete: 6 / 44
+- Last feature worked on: 2.2
 - Known issues: Better-sqlite3 requires electron-rebuild before E2E tests, npm rebuild after for unit tests
 
 ## Next Priority
 Continue with Phase 2 scale calibration:
-1. Task 2.2: Scale Input Dialog - Enter scale value in centimeters
+1. Task 2.3: Persist Scale to Database - Save scale calibration data
 

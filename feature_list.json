@@ -69,7 +69,7 @@
                 "User can change value",
                 "Confirm button stores scale calculation"
             ],
-            "passes": false
+            "passes": true
         },
         {
             "id": "2.3",

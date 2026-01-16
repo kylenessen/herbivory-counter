@@ -179,3 +179,143 @@ test.describe('Feature 2.1: User can draw a line on scale ruler', () => {
         expect(scaleLine).toBeNull()
     })
 })
+
+test.describe('Feature 2.2: User can enter scale value in centimeters', () => {
+    test.beforeAll(async () => {
+        // Check if folder is already open by looking for the grid or welcome section
+        const gridVisible = await page.locator('#image-grid').isVisible()
+        const welcomeVisible = await page.locator('#welcome-section').isVisible()
+
+        if (welcomeVisible && !gridVisible) {
+            // Need to open folder
+            await stubDialog(electronApp, 'showOpenDialog', {
+                canceled: false,
+                filePaths: [testDir]
+            })
+            await page.click('[data-testid="open-folder"]')
+            await page.waitForSelector('#image-grid', { state: 'visible', timeout: 10000 })
+        }
+        // If grid is visible, folder is already open and we're good to go
+    })
+
+    test.beforeEach(async () => {
+        // Close any open dialogs first
+        const dialogVisible = await page.locator('[data-testid="scale-input-dialog"]').isVisible()
+        if (dialogVisible) {
+            await page.click('[data-testid="cancel-scale-btn"]')
+            await page.waitForSelector('[data-testid="scale-input-dialog"]', { state: 'hidden', timeout: 5000 })
+        }
+
+        // Clear any existing scale by going back and reopening
+        const scaleDisplay = await page.locator('[data-testid="scale-display"]').isVisible()
+        if (scaleDisplay) {
+            await page.click('[data-testid="back-to-grid"]')
+            await page.waitForSelector('#image-grid', { state: 'visible', timeout: 5000 })
+        }
+
+        // Ensure we're in image viewer with a drawn line
+        const imageViewer = await page.locator('#image-viewer').isVisible()
+        if (!imageViewer) {
+            // Open image viewer
+            await page.click('.image-thumbnail:first-child')
+            await page.waitForSelector('#image-viewer', { state: 'visible', timeout: 5000 })
+        }
+
+        // Draw a line if not present
+        const scaleLine = await page.evaluate(() => (window as any).scaleLine)
+        if (!scaleLine) {
+            const canvas = page.locator('[data-testid="scale-canvas"]')
+            const box = await canvas.boundingBox()
+            if (box) {
+                await page.mouse.move(box.x + 100, box.y + 200)
+                await page.mouse.down()
+                await page.mouse.move(box.x + 400, box.y + 200)
+                await page.mouse.up()
+            }
+        }
+    })
+
+    test('confirm scale button shows scale input dialog', async () => {
+        // Click the confirm scale button
+        await page.click('#confirm-scale-btn')
+
+        // Dialog should appear with scale input
+        const scaleDialog = page.locator('[data-testid="scale-input-dialog"]')
+        await expect(scaleDialog).toBeVisible()
+    })
+
+    test('scale input has default value of 10 cm', async () => {
+        await page.click('#confirm-scale-btn')
+
+        const scaleInput = page.locator('[data-testid="scale-cm-input"]')
+        await expect(scaleInput).toBeVisible()
+        await expect(scaleInput).toHaveValue('10')
+    })
+
+    test('user can change scale value', async () => {
+        await page.click('#confirm-scale-btn')
+
+        const scaleInput = page.locator('[data-testid="scale-cm-input"]')
+        await scaleInput.clear()
+        await scaleInput.fill('5')
+        await expect(scaleInput).toHaveValue('5')
+    })
+
+    test('confirm button calculates and stores scale', async () => {
+        await page.click('#confirm-scale-btn')
+
+        const scaleInput = page.locator('[data-testid="scale-cm-input"]')
+        await scaleInput.clear()
+        await scaleInput.fill('10')
+
+        // Click confirm in dialog
+        await page.click('[data-testid="confirm-scale-value-btn"]')
+
+        // Scale should be stored and dialog should close
+        const scaleDialog = page.locator('[data-testid="scale-input-dialog"]')
+        await expect(scaleDialog).not.toBeVisible()
+
+        // Scale value should be accessible
+        const scaleValue = await page.evaluate(() => (window as any).scaleValue)
+        expect(scaleValue).toBeDefined()
+        expect(scaleValue.pxPerCm).toBeGreaterThan(0)
+    })
+
+    test('scale displayed on screen after confirmation', async () => {
+        await page.click('#confirm-scale-btn')
+
+        const scaleInput = page.locator('[data-testid="scale-cm-input"]')
+        await scaleInput.clear()
+        await scaleInput.fill('10')
+
+        await page.click('[data-testid="confirm-scale-value-btn"]')
+
+        // Scale display should be visible
+        const scaleDisplay = page.locator('[data-testid="scale-display"]')
+        await expect(scaleDisplay).toBeVisible()
+
+        // Should show format like "1 cm = XX px"
+        const displayText = await scaleDisplay.textContent()
+        expect(displayText).toMatch(/1\s*cm\s*=\s*\d+(\.\d+)?\s*px/)
+
+        // Take screenshot for Feature 2.2 documentation
+        await page.screenshot({ path: resolve(__dirname, '../../screenshots/2.2.png') })
+    })
+
+    test('cancel button closes dialog without saving scale', async () => {
+        await page.click('#confirm-scale-btn')
+
+        const scaleDialog = page.locator('[data-testid="scale-input-dialog"]')
+        await expect(scaleDialog).toBeVisible()
+
+        // Click cancel
+        await page.click('[data-testid="cancel-scale-btn"]')
+
+        // Dialog should close
+        await expect(scaleDialog).not.toBeVisible()
+
+        // Scale should not be set
+        const scaleDisplay = page.locator('[data-testid="scale-display"]')
+        await expect(scaleDisplay).not.toBeVisible()
+    })
+})

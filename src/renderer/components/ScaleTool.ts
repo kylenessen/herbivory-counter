@@ -47,6 +47,13 @@ export function updateLineEndpoint(
   }
 }
 
+// Calculate scale (pixels per cm) from line length and cm value
+// Feature 2.2: Scale Input Dialog
+export function calculateScale(lineLength: number, cmValue: number): number {
+  if (cmValue <= 0) return 0
+  return lineLength / cmValue
+}
+
 // Endpoint radius for hit detection and rendering
 export const ENDPOINT_RADIUS = 8
 export const ENDPOINT_HIT_THRESHOLD = 15

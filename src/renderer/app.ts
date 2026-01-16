@@ -1,5 +1,5 @@
 // Main renderer entry point
-import { ScaleTool, ScaleLine, calculateLineLength } from './components/ScaleTool'
+import { ScaleTool, ScaleLine, calculateLineLength, calculateScale } from './components/ScaleTool'
 
 console.log('Herbivory Counter initialized')
 
@@ -18,13 +18,22 @@ let currentFolderPath: string = ''
 let currentScaleTool: ScaleTool | null = null
 let currentImage: ImageInfo | null = null
 
-// Expose scaleLine state for E2E testing
+// Scale value interface for storing calculated scale
+interface ScaleValue {
+    pxPerCm: number
+    cmValue: number
+    lineLength: number
+}
+
+// Expose state for E2E testing
 declare global {
     interface Window {
         scaleLine: ScaleLine | null
+        scaleValue: ScaleValue | null
     }
 }
 window.scaleLine = null
+window.scaleValue = null
 
 // Get DOM elements
 const openFolderBtn = document.getElementById('open-folder-btn')
@@ -116,6 +125,24 @@ function openImageViewer(image: ImageInfo): void {
                     <button class="btn btn-primary" id="confirm-scale-btn">Confirm Scale Line</button>
                     <button class="btn btn-secondary" id="clear-scale-btn">Clear</button>
                 </div>
+                <p data-testid="scale-display" class="scale-display" id="scale-display" style="display: none;">
+                    1 cm = <span id="scale-px-value">0</span> px
+                </p>
+            </div>
+        </div>
+        <!-- Scale Input Dialog -->
+        <div data-testid="scale-input-dialog" class="scale-input-dialog" id="scale-input-dialog" style="display: none;">
+            <div class="dialog-content">
+                <h3>Enter Scale Value</h3>
+                <p>How many centimeters does your line represent?</p>
+                <div class="dialog-input-group">
+                    <input type="number" data-testid="scale-cm-input" id="scale-cm-input" value="10" min="0.1" step="0.1" />
+                    <span>cm</span>
+                </div>
+                <div class="dialog-buttons">
+                    <button data-testid="cancel-scale-btn" class="btn btn-secondary" id="cancel-scale-dialog-btn">Cancel</button>
+                    <button data-testid="confirm-scale-value-btn" class="btn btn-primary" id="confirm-scale-value-btn">Confirm</button>
+                </div>
             </div>
         </div>
     `
@@ -179,8 +206,64 @@ function initializeScaleTool(canvas: HTMLCanvasElement, image: HTMLImageElement)
         if (currentScaleTool) {
             currentScaleTool.clearLine()
             window.scaleLine = null
+            window.scaleValue = null
             updateScaleUI(null)
         }
+    })
+
+    // Setup confirm scale line button (opens dialog)
+    const confirmScaleBtn = document.getElementById('confirm-scale-btn')
+    confirmScaleBtn?.addEventListener('click', () => {
+        const dialog = document.getElementById('scale-input-dialog')
+        const input = document.getElementById('scale-cm-input') as HTMLInputElement
+        if (dialog && input) {
+            input.value = '10' // Reset to default
+            dialog.style.display = 'flex'
+        }
+    })
+
+    // Setup cancel dialog button
+    const cancelDialogBtn = document.getElementById('cancel-scale-dialog-btn')
+    cancelDialogBtn?.addEventListener('click', () => {
+        const dialog = document.getElementById('scale-input-dialog')
+        if (dialog) {
+            dialog.style.display = 'none'
+        }
+    })
+
+    // Setup confirm scale value button (in dialog)
+    const confirmScaleValueBtn = document.getElementById('confirm-scale-value-btn')
+    confirmScaleValueBtn?.addEventListener('click', () => {
+        const input = document.getElementById('scale-cm-input') as HTMLInputElement
+        const dialog = document.getElementById('scale-input-dialog')
+        const scaleDisplay = document.getElementById('scale-display')
+        const scalePxValue = document.getElementById('scale-px-value')
+        const confirmSection = document.getElementById('scale-confirm-section')
+
+        if (!input || !window.scaleLine) return
+
+        const cmValue = parseFloat(input.value)
+        if (isNaN(cmValue) || cmValue <= 0) {
+            alert('Please enter a valid positive number')
+            return
+        }
+
+        // Calculate scale
+        const lineLength = calculateLineLength(window.scaleLine.start, window.scaleLine.end)
+        const pxPerCm = calculateScale(lineLength, cmValue)
+
+        // Store scale value
+        window.scaleValue = {
+            pxPerCm,
+            cmValue,
+            lineLength
+        }
+
+        // Update UI
+        if (dialog) dialog.style.display = 'none'
+        if (scalePxValue) scalePxValue.textContent = pxPerCm.toFixed(1)
+        if (scaleDisplay) scaleDisplay.style.display = 'block'
+        if (confirmSection) confirmSection.style.display = 'none'
     })
 }
 
