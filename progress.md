@@ -25,14 +25,22 @@ This file tracks work completed by each agent session. Read this to understand p
 - Marked feature 1.1 as passes: true in feature_list.json
 - Commits: feat(foundation): verify feature 1.1 - Electron window opens correctly
 
+### 2026-01-16 - Feature 1.2 Verification Session
+- Verified Jest unit tests run with `npm test` - 1 test passing
+- Verified Playwright E2E tests run with `npm run test:e2e` - 2 tests passing
+- Built app with `npm run build` to prepare for E2E tests
+- Captured screenshot of running app saved to screenshots/1.2.png
+- Marked feature 1.2 as passes: true in feature_list.json
+- Commits: feat(testing): verify feature 1.2 - testing infrastructure works
+
 ---
 
 ## Current State
 - Project: Initialized with electron-vite, TypeScript
-- Features complete: 1 / 44
-- Last feature worked on: 1.1
+- Features complete: 2 / 44
+- Last feature worked on: 1.2
 - Known issues: None
 
 ## Next Priority
 Continue with Phase 1 foundation work:
-1. Task 1.2: Set up testing infrastructure (already scaffolded, needs verification)
+1. Task 1.3: Configure SQLite database with schema

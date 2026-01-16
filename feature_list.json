@@ -22,7 +22,7 @@
                 "npm run test:e2e runs Playwright tests",
                 "At least one passing test in each suite"
             ],
-            "passes": false
+            "passes": true
         },
         {
             "id": "1.3",
