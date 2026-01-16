@@ -45,7 +45,7 @@
                 "Grid view shows thumbnail for each image",
                 "Clicking thumbnail opens full image view"
             ],
-            "passes": false
+            "passes": true
         },
         {
             "id": "2.1",

@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data:">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data:">
   <title>Herbivory Counter</title>
   <link rel="stylesheet" href="./styles/main.css">
 </head>
+
 <body>
   <div id="app">
     <header class="app-header">
       <h1>Herbivory Counter</h1>
       <p class="subtitle">Leaf herbivory measurement tool</p>
     </header>
-    
+
     <main class="app-main">
       <section class="welcome-section" id="welcome-section">
         <div class="welcome-card">
@@ -24,7 +27,7 @@
           </button>
         </div>
       </section>
-      
+
       <section class="folder-status" id="folder-status" style="display: none;">
         <div class="status-info">
           <p><strong>Folder:</strong> <span id="folder-path"></span></p>
@@ -33,13 +36,17 @@
           <p><strong>Tables:</strong> <span id="table-list" data-testid="table-list"></span></p>
         </div>
       </section>
-      
+
       <section class="image-grid" id="image-grid" style="display: none;">
         <!-- Image thumbnails will be added here -->
+      </section>
+
+      <section class="image-viewer" id="image-viewer" style="display: none;">
+        <!-- Full image view will be rendered here -->
       </section>
     </main>
   </div>
   <script type="module" src="./app.ts"></script>
 </body>
-</html>
 
+</html>

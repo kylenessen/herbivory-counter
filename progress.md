@@ -47,15 +47,30 @@ This file tracks work completed by each agent session. Read this to understand p
 - Marked feature 1.3 as passes: true in feature_list.json
 - Commits: feat(database): implement feature 1.3 - SQLite database with schema
 
+### 2026-01-16 - Feature 1.4 Implementation Session
+- Implemented image grid view with thumbnails when folder is opened
+- Added full image viewer with back button to return to grid
+- Created comprehensive CSS styles for thumbnails with hover effects and status indicators
+- Updated renderer app.ts with state management for images and viewer
+- Fixed electron.vite.config.ts to mark better-sqlite3 as external module
+- Ran electron-rebuild to fix native module version mismatch
+- Installed electron-playwright-helpers for proper dialog mocking in E2E tests
+- Rewrote database E2E tests to test via app UI instead of importing native module
+- Wrote 6 new E2E tests for image grid feature (all passing)
+- Unit tests: 14 passing | E2E tests: 11 passing
+- Captured screenshot saved to screenshots/1.4.png
+- Marked feature 1.4 as passes: true in feature_list.json
+- Commits: feat(image-grid): implement feature 1.4 - image grid with thumbnails
+
 ---
 
 ## Current State
 - Project: Initialized with electron-vite, TypeScript, SQLite
-- Features complete: 3 / 44
-- Last feature worked on: 1.3
-- Known issues: None
+- Features complete: 4 / 44
+- Last feature worked on: 1.4
+- Known issues: Better-sqlite3 requires electron-rebuild before E2E tests, npm rebuild after for unit tests
 
 ## Next Priority
-Continue with Phase 1 foundation work:
-1. Task 1.4: Basic Image Loading - Add image grid view with thumbnails
+Continue with Phase 2 scale calibration:
+1. Task 2.1: Line Drawing Tool - Draw a line on scale ruler
 
