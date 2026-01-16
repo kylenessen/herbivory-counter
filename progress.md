@@ -106,14 +106,23 @@ This file tracks work completed by each agent session. Read this to understand p
 - Marked feature 2.3 as passes: true in feature_list.json
 - Commits: feat(scale): implement feature 2.3 - persist scale calibration
 
+### 2026-01-16 - Feature 3.1 Implementation Session
+- Added polygon mode UI with a dedicated `polygon-canvas` overlay in the image viewer
+- Implemented `PolygonTool` for point-and-click vertex placement with vertex circles and connecting lines
+- Exposed `window.polygonVertices` for E2E verification
+- Added Playwright E2E test for vertex placement and captured screenshot saved to screenshots/3.1.png
+- Marked feature 3.1 as passes: true in feature_list.json
+- Updated npm scripts to handle `ELECTRON_RUN_AS_NODE` and rebuild `better-sqlite3` for node/electron as needed
+- Commits: feat(polygon-tool): implement feature 3.1 - point-and-click vertex placement
+
 ---
 
 ## Current State
 - Project: Initialized with electron-vite, TypeScript, SQLite
-- Features complete: 6 / 44
-- Last feature worked on: 2.2
+- Features complete: 7 / 44
+- Last feature worked on: 3.1
 - Known issues: Better-sqlite3 requires electron-rebuild before E2E tests, npm rebuild after for unit tests
 
 ## Next Priority
-Continue with Phase 2 scale calibration:
-1. Task 2.3: Persist Scale to Database - Save scale calibration data
+Continue with Phase 3 polygon drawing:
+1. Task 3.2: Polygon Closing - close polygon by clicking near first vertex

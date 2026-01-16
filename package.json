@@ -4,11 +4,13 @@
   "description": "Leaf herbivory measurement tool for researchers",
   "main": "dist/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
+    "rebuild:node": "npm rebuild better-sqlite3",
+    "dev": "npm run rebuild:electron && env -u ELECTRON_RUN_AS_NODE electron-vite dev",
     "build": "electron-vite build",
-    "preview": "electron-vite preview",
-    "test": "jest",
-    "test:e2e": "playwright test"
+    "preview": "npm run rebuild:electron && env -u ELECTRON_RUN_AS_NODE electron-vite preview",
+    "test": "npm run rebuild:node && jest",
+    "test:e2e": "npm run rebuild:electron && env -u ELECTRON_RUN_AS_NODE playwright test"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.2",

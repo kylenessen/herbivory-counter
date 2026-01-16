@@ -273,6 +273,17 @@ h1 {
   transform: translate(-50%, -50%);
   cursor: crosshair;
   pointer-events: auto;
+  z-index: 1;
+}
+
+.polygon-canvas {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  cursor: crosshair;
+  pointer-events: none;
+  z-index: 2;
 }
 
 /* Viewer toolbar for scale controls */
@@ -282,6 +293,23 @@ h1 {
   border-top: 1px solid #2a2a4a;
   margin-top: 1rem;
   border-radius: 8px;
+}
+
+.tool-mode-toggle {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.tool-mode-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.tool-mode-btn.active {
+  border-color: #4ecca3;
+  box-shadow: 0 0 0 3px rgba(78, 204, 163, 0.15);
 }
 
 .scale-section {
@@ -401,4 +429,17 @@ h1 {
 .dialog-buttons .btn {
   padding: 0.625rem 1.25rem;
   font-size: 0.9rem;
+}
+
+.polygon-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.polygon-instruction {
+  color: #aaa;
+  font-size: 0.95rem;
+  margin: 0;
 }

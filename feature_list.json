@@ -83,18 +83,18 @@
             ],
             "passes": true
         },
-        {
-            "id": "3.1",
-            "category": "polygon",
-            "description": "User can place polygon vertices by clicking",
+	        {
+	            "id": "3.1",
+	            "category": "polygon",
+	            "description": "User can place polygon vertices by clicking",
             "steps": [
                 "Enter polygon mode",
                 "Click on canvas to add vertex",
                 "Vertex appears as circle",
                 "Line connects to previous vertex"
             ],
-            "passes": false
-        },
+	            "passes": true
+	        },
         {
             "id": "3.2",
             "category": "polygon",

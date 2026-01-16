@@ -1,5 +1,7 @@
 // Main renderer entry point
 import { ScaleTool, ScaleLine, calculateLineLength, calculateScale } from './components/ScaleTool'
+import { PolygonTool } from './components/PolygonTool'
+import { Point } from '../shared/types'
 
 console.log('Herbivory Counter initialized')
 
@@ -16,7 +18,9 @@ interface ImageInfo {
 let currentImages: ImageInfo[] = []
 let currentFolderPath: string = ''
 let currentScaleTool: ScaleTool | null = null
+let currentPolygonTool: PolygonTool | null = null
 let currentImage: ImageInfo | null = null
+let currentToolMode: 'scale' | 'polygon' = 'scale'
 
 // Scale value interface for storing calculated scale
 interface ScaleValue {
@@ -30,10 +34,12 @@ declare global {
     interface Window {
         scaleLine: ScaleLine | null
         scaleValue: ScaleValue | null
+        polygonVertices: Point[]
     }
 }
 window.scaleLine = null
 window.scaleValue = null
+window.polygonVertices = []
 
 // Get DOM elements
 const openFolderBtn = document.getElementById('open-folder-btn')
@@ -111,9 +117,18 @@ function openImageViewer(image: ImageInfo): void {
             <div class="canvas-container" id="canvas-container">
                 <img class="viewer-image" id="viewer-image" src="file://${image.filepath}" alt="${image.filename}">
                 <canvas data-testid="scale-canvas" id="scale-canvas" class="scale-canvas"></canvas>
+                <canvas data-testid="polygon-canvas" id="polygon-canvas" class="polygon-canvas"></canvas>
             </div>
         </div>
         <div class="viewer-toolbar">
+            <div class="tool-mode-toggle">
+                <button data-testid="scale-mode-btn" class="btn btn-secondary tool-mode-btn active" id="scale-mode-btn">
+                    Scale
+                </button>
+                <button data-testid="polygon-mode-btn" class="btn btn-secondary tool-mode-btn" id="polygon-mode-btn">
+                    Polygon
+                </button>
+            </div>
             <div class="scale-section">
                 <p data-testid="scale-instruction" class="scale-instruction" id="scale-instruction">
                     Draw a line along your scale ruler (click and drag)
@@ -128,6 +143,12 @@ function openImageViewer(image: ImageInfo): void {
                 <p data-testid="scale-display" class="scale-display" id="scale-display" style="display: none;">
                     1 cm = <span id="scale-px-value">0</span> px
                 </p>
+            </div>
+            <div class="polygon-section" id="polygon-section" style="display: none;">
+                <p data-testid="polygon-instruction" class="polygon-instruction">
+                    Click on the image to add polygon vertices.
+                </p>
+                <button class="btn btn-secondary" id="clear-polygon-btn">Clear Polygon</button>
             </div>
         </div>
         <!-- Scale Input Dialog -->
@@ -154,31 +175,69 @@ function openImageViewer(image: ImageInfo): void {
     // Setup canvas after image loads
     const viewerImage = document.getElementById('viewer-image') as HTMLImageElement
     const scaleCanvas = document.getElementById('scale-canvas') as HTMLCanvasElement
+    const polygonCanvas = document.getElementById('polygon-canvas') as HTMLCanvasElement
 
-    if (viewerImage && scaleCanvas) {
+    // Setup tool mode buttons
+    const scaleModeBtn = document.getElementById('scale-mode-btn')
+    const polygonModeBtn = document.getElementById('polygon-mode-btn')
+    scaleModeBtn?.addEventListener('click', () => setToolMode('scale'))
+    polygonModeBtn?.addEventListener('click', () => setToolMode('polygon'))
+
+    const clearPolygonBtn = document.getElementById('clear-polygon-btn')
+    clearPolygonBtn?.addEventListener('click', () => {
+        currentPolygonTool?.clear()
+        renderPolygonCanvasOnce()
+    })
+
+    if (viewerImage && scaleCanvas && polygonCanvas) {
         viewerImage.onload = () => {
             initializeScaleTool(scaleCanvas, viewerImage)
+            initializePolygonTool(polygonCanvas, viewerImage)
+            setToolMode('scale')
         }
 
         // If image is already loaded (cached)
         if (viewerImage.complete) {
             initializeScaleTool(scaleCanvas, viewerImage)
+            initializePolygonTool(polygonCanvas, viewerImage)
+            setToolMode('scale')
         }
     }
 }
 
-// Initialize the scale tool for line drawing
-function initializeScaleTool(canvas: HTMLCanvasElement, image: HTMLImageElement): void {
-    // Size canvas to match image
-    const container = document.getElementById('canvas-container')
-    if (!container) return
-
-    // Get the actual displayed size of the image
+function sizeCanvasToImage(canvas: HTMLCanvasElement, image: HTMLImageElement): void {
     const rect = image.getBoundingClientRect()
     canvas.width = rect.width
     canvas.height = rect.height
     canvas.style.width = `${rect.width}px`
     canvas.style.height = `${rect.height}px`
+}
+
+function setToolMode(mode: 'scale' | 'polygon'): void {
+    currentToolMode = mode
+
+    const scaleCanvas = document.getElementById('scale-canvas') as HTMLCanvasElement | null
+    const polygonCanvas = document.getElementById('polygon-canvas') as HTMLCanvasElement | null
+    const scaleSection = document.querySelector('.scale-section') as HTMLElement | null
+    const polygonSection = document.getElementById('polygon-section')
+
+    const scaleModeBtn = document.getElementById('scale-mode-btn')
+    const polygonModeBtn = document.getElementById('polygon-mode-btn')
+
+    if (scaleCanvas) scaleCanvas.style.pointerEvents = mode === 'scale' ? 'auto' : 'none'
+    if (polygonCanvas) polygonCanvas.style.pointerEvents = mode === 'polygon' ? 'auto' : 'none'
+
+    if (scaleSection) scaleSection.style.display = mode === 'scale' ? 'flex' : 'none'
+    if (polygonSection) polygonSection.style.display = mode === 'polygon' ? 'flex' : 'none'
+
+    scaleModeBtn?.classList.toggle('active', mode === 'scale')
+    polygonModeBtn?.classList.toggle('active', mode === 'polygon')
+}
+
+// Initialize the scale tool for line drawing
+function initializeScaleTool(canvas: HTMLCanvasElement, image: HTMLImageElement): void {
+    // Size canvas to match image
+    sizeCanvasToImage(canvas, image)
 
     // Clean up previous tool
     if (currentScaleTool) {
@@ -286,6 +345,36 @@ function initializeScaleTool(canvas: HTMLCanvasElement, image: HTMLImageElement)
     })
 }
 
+function initializePolygonTool(canvas: HTMLCanvasElement, image: HTMLImageElement): void {
+    sizeCanvasToImage(canvas, image)
+
+    if (currentPolygonTool) {
+        currentPolygonTool.destroy()
+        currentPolygonTool = null
+    }
+
+    window.polygonVertices = []
+
+    currentPolygonTool = new PolygonTool(canvas)
+    currentPolygonTool.setOnVerticesChanged((vertices) => {
+        window.polygonVertices = vertices
+        renderPolygonCanvasOnce()
+    })
+
+    renderPolygonCanvasOnce()
+}
+
+function renderPolygonCanvasOnce(): void {
+    const canvas = document.getElementById('polygon-canvas') as HTMLCanvasElement | null
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    currentPolygonTool?.render()
+}
+
 // Restore scale from database for the current image (Feature 2.3)
 async function restoreScaleForCurrentImage(): Promise<void> {
     if (!currentImage || !currentScaleTool) return
@@ -389,7 +478,13 @@ function closeImageViewer(): void {
         currentScaleTool = null
     }
     window.scaleLine = null
+    window.polygonVertices = []
+    if (currentPolygonTool) {
+        currentPolygonTool.destroy()
+        currentPolygonTool = null
+    }
     currentImage = null
+    currentToolMode = 'scale'
 
     imageViewer.style.display = 'none'
     folderStatus.style.display = 'block'
