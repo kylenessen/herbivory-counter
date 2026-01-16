@@ -130,7 +130,7 @@
                 "Adjacent vertices reconnect",
                 "Cannot delete below 3 vertices"
             ],
-            "passes": false
+            "passes": true
         },
         {
             "id": "3.5",

@@ -152,3 +152,52 @@ test.describe('Feature 3.3: User can drag vertices to adjust polygon', () => {
     expect(vertices[1].y).toBeLessThan(130)
   })
 })
+
+test.describe('Feature 3.4: User can delete individual vertices', () => {
+  test('deleting vertex updates polygon', async () => {
+    await page.click('[data-testid="polygon-mode-btn"]')
+    await page.click('#clear-polygon-btn')
+
+    const canvas = page.locator('[data-testid="polygon-canvas"]')
+    await expect(canvas).toBeVisible()
+
+    await canvas.click({ position: { x: 100, y: 100 } })
+    await canvas.click({ position: { x: 200, y: 100 } })
+    await canvas.click({ position: { x: 250, y: 150 } })
+    await canvas.click({ position: { x: 150, y: 200 } })
+
+    const before = await page.evaluate(() => (window as any).polygonVertices)
+    expect(before).toHaveLength(4)
+
+    await canvas.click({ position: { x: 200, y: 100 } }) // select vertex 1
+    await page.keyboard.press('Delete')
+
+    const after = await page.evaluate(() => (window as any).polygonVertices)
+    expect(after).toHaveLength(3)
+    expect(after[1].x).toBe(before[2].x)
+    expect(after[1].y).toBe(before[2].y)
+
+    await page.screenshot({ path: resolve(__dirname, '../../screenshots/3.4.png') })
+  })
+
+  test('cannot delete below 3 vertices', async () => {
+    await page.click('[data-testid="polygon-mode-btn"]')
+    await page.click('#clear-polygon-btn')
+
+    const canvas = page.locator('[data-testid="polygon-canvas"]')
+    await expect(canvas).toBeVisible()
+
+    await canvas.click({ position: { x: 100, y: 100 } })
+    await canvas.click({ position: { x: 200, y: 100 } })
+    await canvas.click({ position: { x: 150, y: 200 } })
+
+    const before = await page.evaluate(() => (window as any).polygonVertices)
+    expect(before).toHaveLength(3)
+
+    await canvas.click({ position: { x: 100, y: 100 } }) // select vertex 0
+    await page.keyboard.press('Delete')
+
+    const after = await page.evaluate(() => (window as any).polygonVertices)
+    expect(after).toHaveLength(3)
+  })
+})

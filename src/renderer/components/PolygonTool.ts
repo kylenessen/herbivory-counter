@@ -10,6 +10,7 @@ export class PolygonTool {
   private ctx: CanvasRenderingContext2D
   private vertices: Point[] = []
   private closed = false
+  private selectedIndex: number | null = null
   private dragCandidateIndex: number | null = null
   private draggingIndex: number | null = null
   private dragStartPos: Point | null = null
@@ -21,24 +22,31 @@ export class PolygonTool {
   private onMouseMoveBound: (event: MouseEvent) => void
   private onMouseUpBound: (event: MouseEvent) => void
   private onMouseLeaveBound: (event: MouseEvent) => void
+  private onContextMenuBound: (event: MouseEvent) => void
+  private onKeyDownBound: (event: KeyboardEvent) => void
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Could not get 2D context')
     this.ctx = ctx
+    this.canvas.tabIndex = 0
 
     this.onClickBound = this.handleClick.bind(this)
     this.onMouseDownBound = this.handleMouseDown.bind(this)
     this.onMouseMoveBound = this.handleMouseMove.bind(this)
     this.onMouseUpBound = this.handleMouseUp.bind(this)
     this.onMouseLeaveBound = this.handleMouseLeave.bind(this)
+    this.onContextMenuBound = this.handleContextMenu.bind(this)
+    this.onKeyDownBound = this.handleKeyDown.bind(this)
 
     this.canvas.addEventListener('click', this.onClickBound)
     this.canvas.addEventListener('mousedown', this.onMouseDownBound)
     this.canvas.addEventListener('mousemove', this.onMouseMoveBound)
     this.canvas.addEventListener('mouseup', this.onMouseUpBound)
     this.canvas.addEventListener('mouseleave', this.onMouseLeaveBound)
+    this.canvas.addEventListener('contextmenu', this.onContextMenuBound)
+    window.addEventListener('keydown', this.onKeyDownBound)
   }
 
   public destroy(): void {
@@ -47,6 +55,8 @@ export class PolygonTool {
     this.canvas.removeEventListener('mousemove', this.onMouseMoveBound)
     this.canvas.removeEventListener('mouseup', this.onMouseUpBound)
     this.canvas.removeEventListener('mouseleave', this.onMouseLeaveBound)
+    this.canvas.removeEventListener('contextmenu', this.onContextMenuBound)
+    window.removeEventListener('keydown', this.onKeyDownBound)
   }
 
   public setOnVerticesChanged(callback: (vertices: Point[]) => void): void {
@@ -68,6 +78,7 @@ export class PolygonTool {
   public clear(): void {
     this.vertices = []
     this.closed = false
+    this.selectedIndex = null
     this.dragCandidateIndex = null
     this.draggingIndex = null
     this.dragStartPos = null
@@ -103,15 +114,18 @@ export class PolygonTool {
   }
 
   private handleMouseDown(event: MouseEvent): void {
+    this.canvas.focus()
     const pos = this.getMousePosition(event)
     const idx = this.findVertexIndexAtPosition(pos)
     if (idx !== -1) {
+      this.selectedIndex = idx
       this.dragCandidateIndex = idx
       this.dragStartPos = pos
       this.setCursor('move')
       return
     }
 
+    this.selectedIndex = null
     this.dragCandidateIndex = null
     this.dragStartPos = null
   }
@@ -168,6 +182,44 @@ export class PolygonTool {
       this.onVerticesChanged?.(this.getVertices())
     }
     this.setCursor(DEFAULT_CURSOR)
+  }
+
+  private canDeleteVertex(): boolean {
+    return this.vertices.length > 3
+  }
+
+  private deleteVertex(index: number): boolean {
+    if (index < 0 || index >= this.vertices.length) return false
+    if (!this.canDeleteVertex()) return false
+
+    this.vertices.splice(index, 1)
+    this.selectedIndex = null
+    this.dragCandidateIndex = null
+    this.draggingIndex = null
+    this.dragStartPos = null
+
+    this.onVerticesChanged?.(this.getVertices())
+    return true
+  }
+
+  private handleContextMenu(event: MouseEvent): void {
+    event.preventDefault()
+    const pos = this.getMousePosition(event)
+    const idx = this.findVertexIndexAtPosition(pos)
+    if (idx === -1) return
+
+    this.selectedIndex = idx
+    this.suppressNextClick = true
+    this.deleteVertex(idx)
+  }
+
+  private handleKeyDown(event: KeyboardEvent): void {
+    if (event.key !== 'Delete' && event.key !== 'Backspace') return
+    if (this.selectedIndex === null) return
+    if (this.canvas.style.pointerEvents === 'none') return
+
+    event.preventDefault()
+    this.deleteVertex(this.selectedIndex)
   }
 
   private handleClick(event: MouseEvent): void {

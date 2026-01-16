@@ -133,14 +133,23 @@ This file tracks work completed by each agent session. Read this to understand p
 - Marked feature 3.3 as passes: true in feature_list.json
 - Commits: feat(polygon-tool): implement feature 3.3 - vertex movement
 
+### 2026-01-16 - Feature 3.4 Implementation Session
+- Implemented vertex deletion by selecting a vertex and pressing Delete (or Backspace) key
+- Added right-click deletion support on vertices (context menu suppressed)
+- Enforced minimum of 3 vertices (cannot delete when polygon has 3 or fewer)
+- Added Playwright E2E tests for deletion behavior and captured screenshot saved to screenshots/3.4.png
+- Unit tests: 37 passing | Playwright (polygon-tool.spec.ts): 6 passing
+- Marked feature 3.4 as passes: true in feature_list.json
+- Commits: feat(polygon-tool): implement feature 3.4 - vertex deletion
+
 ---
 
 ## Current State
 - Project: Initialized with electron-vite, TypeScript, SQLite
-- Features complete: 10 / 42
-- Last feature worked on: 3.3
+- Features complete: 11 / 42
+- Last feature worked on: 3.4
 - Known issues: Better-sqlite3 requires electron-rebuild before E2E tests, npm rebuild after for unit tests
 
 ## Next Priority
 Continue with Phase 3 polygon drawing:
-1. Task 3.4: Vertex Deletion - delete individual vertices
+1. Task 3.5: Undo Functionality - undo add/move/delete operations
