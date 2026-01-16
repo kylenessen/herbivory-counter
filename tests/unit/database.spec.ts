@@ -135,6 +135,51 @@ describe('Database CRUD operations', () => {
         expect(image!.scale_line_start_x).toBe(100)
     })
 
+    test('getImageScale returns null when scale not set', () => {
+        const imageId = db.insertImage('/path/to/image.jpg')
+        const scale = db.getImageScale(imageId)
+        expect(scale).toBeNull()
+    })
+
+    test('getImageScale returns saved scale data', () => {
+        const imageId = db.insertImage('/path/to/image.jpg')
+        db.updateImageScale(imageId, {
+            pxPerCm: 45,
+            lineStartX: 100,
+            lineStartY: 100,
+            lineEndX: 550,
+            lineEndY: 100,
+            cmValue: 10
+        })
+
+        const scale = db.getImageScale(imageId)
+        expect(scale).toEqual({
+            pxPerCm: 45,
+            lineStartX: 100,
+            lineStartY: 100,
+            lineEndX: 550,
+            lineEndY: 100,
+            cmValue: 10
+        })
+    })
+
+    test('image scale persists between connections', () => {
+        const imageId = db.insertImage('/path/to/image.jpg')
+        db.updateImageScale(imageId, {
+            pxPerCm: 45,
+            lineStartX: 100,
+            lineStartY: 100,
+            lineEndX: 550,
+            lineEndY: 100,
+            cmValue: 10
+        })
+        db.close()
+
+        db = initDatabase(testDir)
+        const scale = db.getImageScale(imageId)
+        expect(scale?.pxPerCm).toBe(45)
+    })
+
     test('can insert and retrieve a polygon', () => {
         const imageId = db.insertImage('/path/to/image.jpg')
         const vertices = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 100 }]

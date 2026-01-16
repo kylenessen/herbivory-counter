@@ -81,7 +81,7 @@
                 "Open same image",
                 "Scale value is displayed correctly"
             ],
-            "passes": false
+            "passes": true
         },
         {
             "id": "3.1",

@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { join } from 'path'
 import { existsSync, readdirSync } from 'fs'
-import { Database, initDatabase } from './database'
+import { Database, initDatabase, ScaleData } from './database'
 
 let mainWindow: BrowserWindow | null = null
 let currentDatabase: Database | null = null
@@ -105,6 +105,54 @@ ipcMain.handle('database:getTables', async () => {
   return {
     success: true,
     tables: currentDatabase.getTables()
+  }
+})
+
+// IPC Handler: Save scale calibration for an image
+ipcMain.handle('image:saveScale', async (_, imageId: number, scale: ScaleData) => {
+  if (!currentDatabase) {
+    return { success: false, error: 'No database open' }
+  }
+  try {
+    currentDatabase.updateImageScale(imageId, scale)
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+})
+
+// IPC Handler: Get scale calibration for an image
+ipcMain.handle('image:getScale', async (_, imageId: number) => {
+  if (!currentDatabase) {
+    return { success: false, error: 'No database open' }
+  }
+  try {
+    const scale = currentDatabase.getImageScale(imageId)
+    return { success: true, scale }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+})
+
+// IPC Handler: Clear scale calibration for an image
+ipcMain.handle('image:clearScale', async (_, imageId: number) => {
+  if (!currentDatabase) {
+    return { success: false, error: 'No database open' }
+  }
+  try {
+    currentDatabase.clearImageScale(imageId)
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
   }
 })
 

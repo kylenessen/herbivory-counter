@@ -233,6 +233,69 @@ export class Database {
     }
 
     /**
+     * Get scale calibration data for an image (null if not set)
+     */
+    getImageScale(id: number): ScaleData | null {
+        const row = this.db.prepare(
+            `SELECT
+        scale_px_per_cm,
+        scale_line_start_x,
+        scale_line_start_y,
+        scale_line_end_x,
+        scale_line_end_y,
+        scale_cm_value
+      FROM images
+      WHERE id = ?`
+        ).get(id) as
+            | {
+                  scale_px_per_cm: number | null
+                  scale_line_start_x: number | null
+                  scale_line_start_y: number | null
+                  scale_line_end_x: number | null
+                  scale_line_end_y: number | null
+                  scale_cm_value: number | null
+              }
+            | undefined
+
+        if (
+            !row ||
+            row.scale_px_per_cm === null ||
+            row.scale_line_start_x === null ||
+            row.scale_line_start_y === null ||
+            row.scale_line_end_x === null ||
+            row.scale_line_end_y === null ||
+            row.scale_cm_value === null
+        ) {
+            return null
+        }
+
+        return {
+            pxPerCm: row.scale_px_per_cm,
+            lineStartX: row.scale_line_start_x,
+            lineStartY: row.scale_line_start_y,
+            lineEndX: row.scale_line_end_x,
+            lineEndY: row.scale_line_end_y,
+            cmValue: row.scale_cm_value
+        }
+    }
+
+    /**
+     * Clear scale calibration data for an image
+     */
+    clearImageScale(id: number): void {
+        this.db.prepare(`
+      UPDATE images SET
+        scale_px_per_cm = NULL,
+        scale_line_start_x = NULL,
+        scale_line_start_y = NULL,
+        scale_line_end_x = NULL,
+        scale_line_end_y = NULL,
+        scale_cm_value = NULL
+      WHERE id = ?
+    `).run(id)
+    }
+
+    /**
      * Update image sheet ID
      */
     updateImageSheetId(id: number, sheetId: string): void {

@@ -95,6 +95,17 @@ This file tracks work completed by each agent session. Read this to understand p
 - Marked feature 2.2 as passes: true in feature_list.json
 - Commits: feat(scale-input): implement feature 2.2 - scale input dialog
 
+### 2026-01-16 - Feature 2.3 Implementation Session
+- Added `Database.getImageScale`/`clearImageScale` and IPC handlers to save/load/clear scale data per image
+- Updated preload API typings to expose `saveImageScale`, `getImageScale`, and `clearImageScale` to the renderer
+- Renderer now saves confirmed scale calibration to SQLite and restores it when reopening an image (including after relaunch)
+- Updated ScaleTool E2E tests to clear persisted scale between Feature 2.2 cases
+- Wrote new E2E test to verify scale persists across app restarts
+- Unit tests: 37 passing | E2E tests: 26 passing
+- Captured screenshot saved to screenshots/2.3.png
+- Marked feature 2.3 as passes: true in feature_list.json
+- Commits: feat(scale): implement feature 2.3 - persist scale calibration
+
 ---
 
 ## Current State
@@ -106,4 +117,3 @@ This file tracks work completed by each agent session. Read this to understand p
 ## Next Priority
 Continue with Phase 2 scale calibration:
 1. Task 2.3: Persist Scale to Database - Save scale calibration data
-

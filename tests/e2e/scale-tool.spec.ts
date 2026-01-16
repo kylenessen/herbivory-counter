@@ -206,11 +206,11 @@ test.describe('Feature 2.2: User can enter scale value in centimeters', () => {
             await page.waitForSelector('[data-testid="scale-input-dialog"]', { state: 'hidden', timeout: 5000 })
         }
 
-        // Clear any existing scale by going back and reopening
+        // Clear any existing persisted scale (Feature 2.3)
         const scaleDisplay = await page.locator('[data-testid="scale-display"]').isVisible()
         if (scaleDisplay) {
-            await page.click('[data-testid="back-to-grid"]')
-            await page.waitForSelector('#image-grid', { state: 'visible', timeout: 5000 })
+            await page.click('#clear-scale-btn')
+            await expect(page.locator('[data-testid="scale-display"]')).not.toBeVisible()
         }
 
         // Ensure we're in image viewer with a drawn line

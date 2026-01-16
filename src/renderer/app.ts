@@ -187,6 +187,7 @@ function initializeScaleTool(canvas: HTMLCanvasElement, image: HTMLImageElement)
 
     // Reset window state
     window.scaleLine = null
+    window.scaleValue = null
 
     // Create new scale tool
     currentScaleTool = new ScaleTool(canvas)
@@ -200,6 +201,9 @@ function initializeScaleTool(canvas: HTMLCanvasElement, image: HTMLImageElement)
     // Start render loop
     requestAnimationFrame(renderScaleCanvas)
 
+    // Restore any saved scale calibration for this image
+    void restoreScaleForCurrentImage()
+
     // Setup clear button
     const clearBtn = document.getElementById('clear-scale-btn')
     clearBtn?.addEventListener('click', () => {
@@ -207,7 +211,12 @@ function initializeScaleTool(canvas: HTMLCanvasElement, image: HTMLImageElement)
             currentScaleTool.clearLine()
             window.scaleLine = null
             window.scaleValue = null
+            const scaleDisplay = document.getElementById('scale-display')
+            if (scaleDisplay) scaleDisplay.style.display = 'none'
             updateScaleUI(null)
+        }
+        if (currentImage) {
+            void window.electronAPI.clearImageScale(currentImage.id)
         }
     })
 
@@ -238,7 +247,6 @@ function initializeScaleTool(canvas: HTMLCanvasElement, image: HTMLImageElement)
         const dialog = document.getElementById('scale-input-dialog')
         const scaleDisplay = document.getElementById('scale-display')
         const scalePxValue = document.getElementById('scale-px-value')
-        const confirmSection = document.getElementById('scale-confirm-section')
 
         if (!input || !window.scaleLine) return
 
@@ -259,12 +267,57 @@ function initializeScaleTool(canvas: HTMLCanvasElement, image: HTMLImageElement)
             lineLength
         }
 
+        // Persist scale to database
+        if (currentImage) {
+            void window.electronAPI.saveImageScale(currentImage.id, {
+                pxPerCm,
+                lineStartX: window.scaleLine.start.x,
+                lineStartY: window.scaleLine.start.y,
+                lineEndX: window.scaleLine.end.x,
+                lineEndY: window.scaleLine.end.y,
+                cmValue
+            })
+        }
+
         // Update UI
         if (dialog) dialog.style.display = 'none'
         if (scalePxValue) scalePxValue.textContent = pxPerCm.toFixed(1)
         if (scaleDisplay) scaleDisplay.style.display = 'block'
-        if (confirmSection) confirmSection.style.display = 'none'
     })
+}
+
+// Restore scale from database for the current image (Feature 2.3)
+async function restoreScaleForCurrentImage(): Promise<void> {
+    if (!currentImage || !currentScaleTool) return
+
+    const result = await window.electronAPI.getImageScale(currentImage.id)
+    if (!result.success || !result.scale) return
+
+    const scale = result.scale
+    const line: ScaleLine = {
+        start: { x: scale.lineStartX, y: scale.lineStartY },
+        end: { x: scale.lineEndX, y: scale.lineEndY },
+        isComplete: true,
+        isDragging: false,
+        dragTarget: null
+    }
+
+    currentScaleTool.setScaleLine(line)
+    window.scaleLine = line
+
+    const lineLength = calculateLineLength(line.start, line.end)
+    window.scaleValue = {
+        pxPerCm: scale.pxPerCm,
+        cmValue: scale.cmValue,
+        lineLength
+    }
+
+    updateScaleUI(line)
+
+    const scaleDisplay = document.getElementById('scale-display')
+    const scalePxValue = document.getElementById('scale-px-value')
+    if (scalePxValue) scalePxValue.textContent = scale.pxPerCm.toFixed(1)
+    if (scaleDisplay) scaleDisplay.style.display = 'block'
 }
 
 // Update scale UI based on line state

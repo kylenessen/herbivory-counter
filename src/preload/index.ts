@@ -24,6 +24,26 @@ export interface TablesResult {
   tables?: string[]
 }
 
+export interface ScaleData {
+  pxPerCm: number
+  lineStartX: number
+  lineStartY: number
+  lineEndX: number
+  lineEndY: number
+  cmValue: number
+}
+
+export interface SaveScaleResult {
+  success: boolean
+  error?: string
+}
+
+export interface GetScaleResult {
+  success: boolean
+  error?: string
+  scale?: ScaleData | null
+}
+
 // Expose protected methods to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
   // Get Electron version
@@ -38,7 +58,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Get database tables (for verification)
   getDatabaseTables: (): Promise<TablesResult> =>
-    ipcRenderer.invoke('database:getTables')
+    ipcRenderer.invoke('database:getTables'),
+
+  // Save scale calibration data to the database
+  saveImageScale: (imageId: number, scale: ScaleData): Promise<SaveScaleResult> =>
+    ipcRenderer.invoke('image:saveScale', imageId, scale),
+
+  // Load scale calibration data for an image
+  getImageScale: (imageId: number): Promise<GetScaleResult> =>
+    ipcRenderer.invoke('image:getScale', imageId),
+
+  // Clear scale calibration data for an image
+  clearImageScale: (imageId: number): Promise<SaveScaleResult> =>
+    ipcRenderer.invoke('image:clearScale', imageId)
 })
 
 // Type declaration for window.electronAPI
@@ -49,7 +81,9 @@ declare global {
       openFolder: () => Promise<OpenFolderResult>
       databaseExists: (folderPath: string) => Promise<boolean>
       getDatabaseTables: () => Promise<TablesResult>
+      saveImageScale: (imageId: number, scale: ScaleData) => Promise<SaveScaleResult>
+      getImageScale: (imageId: number) => Promise<GetScaleResult>
+      clearImageScale: (imageId: number) => Promise<SaveScaleResult>
     }
   }
 }
-
