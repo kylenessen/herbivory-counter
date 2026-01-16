@@ -1,0 +1,503 @@
+{
+    "project": "Leaf Herbivory Counter",
+    "last_updated": "2026-01-16",
+    "features": [
+        {
+            "id": "1.1",
+            "category": "foundation",
+            "description": "Electron window opens with correct title",
+            "steps": [
+                "npm run dev starts application",
+                "Window appears with title 'Herbivory Counter'",
+                "No console errors on startup"
+            ],
+            "passes": false
+        },
+        {
+            "id": "1.2",
+            "category": "foundation",
+            "description": "Testing infrastructure runs unit and e2e tests",
+            "steps": [
+                "npm test runs Jest unit tests",
+                "npm run test:e2e runs Playwright tests",
+                "At least one passing test in each suite"
+            ],
+            "passes": false
+        },
+        {
+            "id": "1.3",
+            "category": "foundation",
+            "description": "SQLite database creates with correct schema",
+            "steps": [
+                "Open folder in application",
+                "herbivory.db file appears in folder",
+                "Database contains images, polygons, cells, app_state tables"
+            ],
+            "passes": false
+        },
+        {
+            "id": "1.4",
+            "category": "foundation",
+            "description": "Image grid view shows thumbnails from folder",
+            "steps": [
+                "Click 'Open Folder' button",
+                "Select folder containing test images",
+                "Grid view shows thumbnail for each image",
+                "Clicking thumbnail opens full image view"
+            ],
+            "passes": false
+        },
+        {
+            "id": "2.1",
+            "category": "scale",
+            "description": "User can draw a line on scale ruler",
+            "steps": [
+                "Open image in full view",
+                "Click and drag to draw a line",
+                "Line appears with draggable endpoints",
+                "Line persists until confirmed or canceled"
+            ],
+            "passes": false
+        },
+        {
+            "id": "2.2",
+            "category": "scale",
+            "description": "User can enter scale value in centimeters",
+            "steps": [
+                "After drawing line, dialog appears",
+                "Input field shows default value of 10 cm",
+                "User can change value",
+                "Confirm button stores scale calculation"
+            ],
+            "passes": false
+        },
+        {
+            "id": "2.3",
+            "category": "scale",
+            "description": "Scale persists across app restarts",
+            "steps": [
+                "Set scale for an image",
+                "Close and reopen application",
+                "Open same image",
+                "Scale value is displayed correctly"
+            ],
+            "passes": false
+        },
+        {
+            "id": "3.1",
+            "category": "polygon",
+            "description": "User can place polygon vertices by clicking",
+            "steps": [
+                "Enter polygon mode",
+                "Click on canvas to add vertex",
+                "Vertex appears as circle",
+                "Line connects to previous vertex"
+            ],
+            "passes": false
+        },
+        {
+            "id": "3.2",
+            "category": "polygon",
+            "description": "Polygon closes when clicking near first vertex",
+            "steps": [
+                "Add at least 3 vertices",
+                "Click within 10px of first vertex",
+                "Polygon closes and fills with semi-transparent color",
+                "No more vertices can be added to this polygon"
+            ],
+            "passes": false
+        },
+        {
+            "id": "3.3",
+            "category": "polygon",
+            "description": "User can drag vertices to adjust polygon",
+            "steps": [
+                "Hover over existing vertex",
+                "Cursor changes to move indicator",
+                "Drag vertex to new position",
+                "Polygon updates in real-time"
+            ],
+            "passes": false
+        },
+        {
+            "id": "3.4",
+            "category": "polygon",
+            "description": "User can delete individual vertices",
+            "steps": [
+                "Select a vertex",
+                "Press Delete key or right-click and delete",
+                "Vertex is removed",
+                "Adjacent vertices reconnect",
+                "Cannot delete below 3 vertices"
+            ],
+            "passes": false
+        },
+        {
+            "id": "3.5",
+            "category": "polygon",
+            "description": "Undo reverts polygon operations",
+            "steps": [
+                "Add a vertex",
+                "Press Cmd+Z",
+                "Vertex is removed",
+                "Undo works for add, move, delete operations"
+            ],
+            "passes": false
+        },
+        {
+            "id": "3.6",
+            "category": "polygon",
+            "description": "User can delete entire polygon",
+            "steps": [
+                "Select a polygon",
+                "Press Backspace or click delete button",
+                "Confirmation dialog appears",
+                "Polygon and associated cells are removed"
+            ],
+            "passes": false
+        },
+        {
+            "id": "3.7",
+            "category": "polygon",
+            "description": "Multiple polygons per image with sequential IDs",
+            "steps": [
+                "Create and close first polygon (ID: 01)",
+                "Click 'New Leaf' button",
+                "Create and close second polygon (ID: 02)",
+                "Both polygons visible and selectable"
+            ],
+            "passes": false
+        },
+        {
+            "id": "4.1",
+            "category": "grid",
+            "description": "Grid cell size calculated from scale",
+            "steps": [
+                "Set scale (e.g., 45 px/cm)",
+                "Set grid size (e.g., 1 mm)",
+                "Grid cells display at correct pixel size (4.5 px)"
+            ],
+            "passes": false
+        },
+        {
+            "id": "4.2",
+            "category": "grid",
+            "description": "Grid overlay renders inside polygon only",
+            "steps": [
+                "Close a polygon",
+                "Proceed to grid step",
+                "Grid appears only within leaf boundary",
+                "Cells outside polygon are not rendered"
+            ],
+            "passes": false
+        },
+        {
+            "id": "4.3",
+            "category": "grid",
+            "description": "User can adjust grid size in mm",
+            "steps": [
+                "Locate grid size input field",
+                "Change value from 1 to 2 mm",
+                "Grid recalculates with larger cells",
+                "Warning shown if cells already classified"
+            ],
+            "passes": false
+        },
+        {
+            "id": "4.4",
+            "category": "grid",
+            "description": "Edge cells included if center is inside polygon",
+            "steps": [
+                "Observe cells at polygon boundary",
+                "Cell is included if center point is inside",
+                "Edge cells are clickable and classifiable"
+            ],
+            "passes": false
+        },
+        {
+            "id": "5.1",
+            "category": "classification",
+            "description": "Clicking a grid cell changes its classification",
+            "steps": [
+                "Set active category to 'present'",
+                "Click on a grid cell",
+                "Cell changes to herbivory present state",
+                "Classification is recorded"
+            ],
+            "passes": false
+        },
+        {
+            "id": "5.2",
+            "category": "classification",
+            "description": "Three categories: absent, present, unsure",
+            "steps": [
+                "All cells default to 'absent'",
+                "Click to change to 'present'",
+                "Click again with 'unsure' selected to change",
+                "Each category has distinct visual style"
+            ],
+            "passes": false
+        },
+        {
+            "id": "5.3",
+            "category": "classification",
+            "description": "Category buttons and hotkeys work",
+            "steps": [
+                "Click 'Absent' button - becomes active",
+                "Press '2' key - 'Present' becomes active",
+                "Press '3' key - 'Unsure' becomes active",
+                "Active category highlighted in UI"
+            ],
+            "passes": false
+        },
+        {
+            "id": "5.4",
+            "category": "classification",
+            "description": "Shift-click always sets cell to absent",
+            "steps": [
+                "Set category to 'present'",
+                "Click cell - turns green",
+                "Shift-click same cell - returns to gray (absent)",
+                "Works regardless of active category"
+            ],
+            "passes": false
+        },
+        {
+            "id": "5.5",
+            "category": "classification",
+            "description": "Categories have distinct visual styles",
+            "steps": [
+                "Absent cells: light gray fill, dark gray border",
+                "Present cells: green fill at 50% opacity",
+                "Unsure cells: yellow fill at 50% opacity"
+            ],
+            "passes": false
+        },
+        {
+            "id": "5.6",
+            "category": "classification",
+            "description": "Adjacent same-category cells merge borders",
+            "steps": [
+                "Mark two adjacent cells as 'present'",
+                "Interior border becomes thin or invisible",
+                "Outer perimeter maintains thick border",
+                "Creates clear blob-like visualization"
+            ],
+            "passes": false
+        },
+        {
+            "id": "6.1",
+            "category": "zoom",
+            "description": "Spacebar toggles zoom level",
+            "steps": [
+                "Default view shows entire leaf in frame",
+                "Press spacebar - zooms to 100%",
+                "Press spacebar again - returns to fit view"
+            ],
+            "passes": false
+        },
+        {
+            "id": "6.2",
+            "category": "zoom",
+            "description": "Zoom centers on cursor position",
+            "steps": [
+                "Position cursor over specific cell",
+                "Press spacebar to zoom",
+                "Zoomed view centers on cursor location",
+                "Target cell is visible at center"
+            ],
+            "passes": false
+        },
+        {
+            "id": "6.3",
+            "category": "zoom",
+            "description": "Cmd+drag pans while zoomed",
+            "steps": [
+                "Zoom in with spacebar",
+                "Hold Cmd key and drag",
+                "View pans following mouse movement",
+                "Cursor changes to grab icon"
+            ],
+            "passes": false
+        },
+        {
+            "id": "6.4",
+            "category": "zoom",
+            "description": "Cell classification works while zoomed",
+            "steps": [
+                "Zoom in on a cell",
+                "Click to classify - works correctly",
+                "Hover states work",
+                "Cell detection accounts for zoom transform"
+            ],
+            "passes": false
+        },
+        {
+            "id": "7.1",
+            "category": "workflow",
+            "description": "Sheet ID input required before proceeding",
+            "steps": [
+                "Open image view",
+                "Sheet ID input field is visible",
+                "Cannot proceed to polygon step without ID",
+                "ID persists to database"
+            ],
+            "passes": false
+        },
+        {
+            "id": "7.2",
+            "category": "workflow",
+            "description": "Leaf IDs assigned sequentially per sheet",
+            "steps": [
+                "Create first polygon - gets ID '01'",
+                "Create second polygon - gets ID '02'",
+                "Full ID format: 'SHEET-01', 'SHEET-02'"
+            ],
+            "passes": false
+        },
+        {
+            "id": "7.3",
+            "category": "workflow",
+            "description": "Researcher name required for classification",
+            "steps": [
+                "Researcher input field visible",
+                "Clear field and try to classify cell",
+                "Error shown: 'Enter researcher name'",
+                "Name saved with each classification"
+            ],
+            "passes": false
+        },
+        {
+            "id": "7.4",
+            "category": "workflow",
+            "description": "Confirmation buttons at each step",
+            "steps": [
+                "After setting scale - 'Confirm Scale' button",
+                "After drawing polygons - 'Confirm Leaves' button",
+                "After classifying leaf - 'Confirm Leaf' button",
+                "Confirmation saves state and advances"
+            ],
+            "passes": false
+        },
+        {
+            "id": "7.5",
+            "category": "workflow",
+            "description": "Grid view shows completion status",
+            "steps": [
+                "Complete processing on one image",
+                "Return to grid view",
+                "Completed image shows checkmark icon",
+                "In-progress shows partial icon",
+                "Not started shows empty state"
+            ],
+            "passes": false
+        },
+        {
+            "id": "7.6",
+            "category": "workflow",
+            "description": "App resumes from last position",
+            "steps": [
+                "Work on image 5 of 10",
+                "Close application",
+                "Reopen and select same folder",
+                "Automatically navigates to image 5"
+            ],
+            "passes": false
+        },
+        {
+            "id": "8.1",
+            "category": "export",
+            "description": "Area calculated correctly from cells and scale",
+            "steps": [
+                "Classify cells on a leaf",
+                "View calculated areas in mm²",
+                "Formula: cellCount × (gridSizeMm)²",
+                "Herbivory percentage calculated"
+            ],
+            "passes": false
+        },
+        {
+            "id": "8.2",
+            "category": "export",
+            "description": "CSV export contains all required columns",
+            "steps": [
+                "Click 'Export CSV' button",
+                "CSV contains: sheet_id, leaf_id, total_area_mm2",
+                "Also: herbivory_area_mm2, unsure_area_mm2, herbivory_percent",
+                "Also: scale_px_per_cm, grid_size_mm, researcher"
+            ],
+            "passes": false
+        },
+        {
+            "id": "8.3",
+            "category": "export",
+            "description": "Export filename includes date",
+            "steps": [
+                "Click Export button",
+                "File created: herbivory_export_2026-01-16.csv",
+                "File saved in image directory",
+                "Subsequent exports increment: _1, _2"
+            ],
+            "passes": false
+        },
+        {
+            "id": "8.4",
+            "category": "export",
+            "description": "Export button shows success message",
+            "steps": [
+                "Complete at least one leaf",
+                "Click Export button",
+                "Success message shows file path",
+                "Button disabled if no completed leaves"
+            ],
+            "passes": false
+        },
+        {
+            "id": "9.1",
+            "category": "polish",
+            "description": "Application loads JPEG, PNG, and HEIC images",
+            "steps": [
+                "Add JPEG image to folder - loads correctly",
+                "Add PNG image to folder - loads correctly",
+                "Add HEIC image to folder - converts and loads"
+            ],
+            "passes": false
+        },
+        {
+            "id": "9.2",
+            "category": "polish",
+            "description": "Corrupted images show error gracefully",
+            "steps": [
+                "Add corrupted image file to folder",
+                "Application shows error overlay on thumbnail",
+                "User can skip to next image",
+                "App does not crash"
+            ],
+            "passes": false
+        },
+        {
+            "id": "9.3",
+            "category": "polish",
+            "description": "Destructive actions require confirmation",
+            "steps": [
+                "Try to delete polygon - dialog appears",
+                "Try to reset scale with existing cells - warning appears",
+                "User can cancel both actions"
+            ],
+            "passes": false
+        },
+        {
+            "id": "9.4",
+            "category": "polish",
+            "description": "Scale reset warns about losing classifications",
+            "steps": [
+                "Classify some cells",
+                "Click to edit scale",
+                "Warning: 'This will clear all cell classifications'",
+                "Cancel preserves classifications",
+                "Confirm clears classifications"
+            ],
+            "passes": false
+        }
+    ]
+}
