@@ -33,7 +33,7 @@
                 "herbivory.db file appears in folder",
                 "Database contains images, polygons, cells, app_state tables"
             ],
-            "passes": false
+            "passes": true
         },
         {
             "id": "1.4",

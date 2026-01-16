@@ -3,15 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data:">
   <title>Herbivory Counter</title>
   <link rel="stylesheet" href="./styles/main.css">
 </head>
 <body>
   <div id="app">
-    <h1>Herbivory Counter</h1>
-    <p>Leaf herbivory measurement tool</p>
+    <header class="app-header">
+      <h1>Herbivory Counter</h1>
+      <p class="subtitle">Leaf herbivory measurement tool</p>
+    </header>
+    
+    <main class="app-main">
+      <section class="welcome-section" id="welcome-section">
+        <div class="welcome-card">
+          <h2>Get Started</h2>
+          <p>Open a folder containing leaf images to begin measuring herbivory.</p>
+          <button data-testid="open-folder" id="open-folder-btn" class="btn btn-primary">
+            Open Folder
+          </button>
+        </div>
+      </section>
+      
+      <section class="folder-status" id="folder-status" style="display: none;">
+        <div class="status-info">
+          <p><strong>Folder:</strong> <span id="folder-path"></span></p>
+          <p><strong>Database:</strong> <span id="database-status"></span></p>
+          <p><strong>Images:</strong> <span id="image-count"></span></p>
+          <p><strong>Tables:</strong> <span id="table-list" data-testid="table-list"></span></p>
+        </div>
+      </section>
+      
+      <section class="image-grid" id="image-grid" style="display: none;">
+        <!-- Image thumbnails will be added here -->
+      </section>
+    </main>
   </div>
   <script type="module" src="./app.ts"></script>
 </body>
 </html>
+

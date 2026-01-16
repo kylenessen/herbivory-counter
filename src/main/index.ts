@@ -1,8 +1,13 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { join } from 'path'
+import { existsSync, readdirSync } from 'fs'
+import { Database, initDatabase } from './database'
+
+let mainWindow: BrowserWindow | null = null
+let currentDatabase: Database | null = null
 
 function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
@@ -22,6 +27,87 @@ function createWindow(): void {
   }
 }
 
+// IPC Handler: Open folder dialog and initialize database
+ipcMain.handle('dialog:openFolder', async () => {
+  if (!mainWindow) return { success: false, error: 'No window available' }
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+    title: 'Select Image Folder'
+  })
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return { success: false, canceled: true }
+  }
+
+  const folderPath = result.filePaths[0]
+
+  try {
+    // Close existing database if open
+    if (currentDatabase) {
+      currentDatabase.close()
+    }
+
+    // Initialize database in the selected folder
+    currentDatabase = initDatabase(folderPath)
+
+    // Scan for image files and add them to database
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.heic', '.heif']
+    const files = readdirSync(folderPath)
+    const imageFiles = files.filter(file => {
+      const ext = file.toLowerCase().slice(file.lastIndexOf('.'))
+      return imageExtensions.includes(ext)
+    })
+
+    // Add images to database if not already present
+    for (const imageFile of imageFiles) {
+      const imagePath = join(folderPath, imageFile)
+      const existing = currentDatabase.getImageByPath(imagePath)
+      if (!existing) {
+        currentDatabase.insertImage(imagePath)
+      }
+    }
+
+    // Get all images from database
+    const images = currentDatabase.getAllImages()
+
+    return {
+      success: true,
+      folderPath,
+      images: images.map(img => ({
+        id: img.id,
+        filepath: img.filepath,
+        filename: img.filepath.split('/').pop() || img.filepath,
+        sheetId: img.sheet_id,
+        completed: img.completed
+      })),
+      databasePath: join(folderPath, 'herbivory.db')
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+})
+
+// IPC Handler: Check if database exists in folder
+ipcMain.handle('database:exists', async (_, folderPath: string) => {
+  const dbPath = join(folderPath, 'herbivory.db')
+  return existsSync(dbPath)
+})
+
+// IPC Handler: Get database tables (for verification)
+ipcMain.handle('database:getTables', async () => {
+  if (!currentDatabase) {
+    return { success: false, error: 'No database open' }
+  }
+  return {
+    success: true,
+    tables: currentDatabase.getTables()
+  }
+})
+
 app.whenReady().then(() => {
   createWindow()
 
@@ -35,5 +121,13 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
+  }
+})
+
+// Clean up database on app quit
+app.on('before-quit', () => {
+  if (currentDatabase) {
+    currentDatabase.close()
+    currentDatabase = null
   }
 })
