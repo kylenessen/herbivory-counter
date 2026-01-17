@@ -142,14 +142,22 @@ This file tracks work completed by each agent session. Read this to understand p
 - Marked feature 3.4 as passes: true in feature_list.json
 - Commits: feat(polygon-tool): implement feature 3.4 - vertex deletion
 
+### 2026-01-17 - Feature 3.5 Implementation Session
+- Implemented undo stack in `PolygonTool` for add/move/delete operations (Cmd+Z)
+- Added Playwright E2E tests covering undo for add, move, and delete operations
+- Unit tests: 37 passing | E2E tests: 35 passing
+- Captured screenshot saved to screenshots/3.5.png
+- Marked feature 3.5 as passes: true in feature_list.json
+- Commits: feat(polygon-tool): implement feature 3.5 - undo operations
+
 ---
 
 ## Current State
 - Project: Initialized with electron-vite, TypeScript, SQLite
-- Features complete: 11 / 42
-- Last feature worked on: 3.4
+- Features complete: 12 / 42
+- Last feature worked on: 3.5
 - Known issues: Better-sqlite3 requires electron-rebuild before E2E tests, npm rebuild after for unit tests
 
 ## Next Priority
 Continue with Phase 3 polygon drawing:
-1. Task 3.5: Undo Functionality - undo add/move/delete operations
+1. Task 3.6: Polygon Deletion - delete an entire polygon with confirmation

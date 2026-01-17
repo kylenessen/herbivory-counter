@@ -201,3 +201,94 @@ test.describe('Feature 3.4: User can delete individual vertices', () => {
     expect(after).toHaveLength(3)
   })
 })
+
+test.describe('Feature 3.5: Undo reverts polygon operations', () => {
+  const modKey = process.platform === 'darwin' ? 'Meta' : 'Control'
+
+  test('Cmd+Z undoes last vertex addition', async () => {
+    await page.click('[data-testid="polygon-mode-btn"]')
+    await page.click('#clear-polygon-btn')
+
+    const canvas = page.locator('[data-testid="polygon-canvas"]')
+    await expect(canvas).toBeVisible()
+
+    await canvas.click({ position: { x: 100, y: 100 } })
+    await canvas.click({ position: { x: 200, y: 100 } })
+
+    const beforeUndo = await page.evaluate(() => (window as any).polygonVertices)
+    expect(beforeUndo).toHaveLength(2)
+
+    await page.keyboard.press(`${modKey}+Z`)
+
+    const afterUndo = await page.evaluate(() => (window as any).polygonVertices)
+    expect(afterUndo).toHaveLength(1)
+  })
+
+  test('Cmd+Z undoes vertex move', async () => {
+    await page.click('[data-testid="polygon-mode-btn"]')
+    await page.click('#clear-polygon-btn')
+
+    const canvas = page.locator('[data-testid="polygon-canvas"]')
+    await expect(canvas).toBeVisible()
+
+    await canvas.click({ position: { x: 100, y: 100 } })
+    await canvas.click({ position: { x: 200, y: 100 } })
+    await canvas.click({ position: { x: 150, y: 200 } })
+
+    const beforeMove = await page.evaluate(() => (window as any).polygonVertices)
+    expect(beforeMove).toHaveLength(3)
+
+    const box = await canvas.boundingBox()
+    if (!box) throw new Error('Could not get polygon canvas bounding box')
+
+    await page.mouse.move(box.x + 100, box.y + 100)
+    await page.mouse.down()
+    await page.mouse.move(box.x + 50, box.y + 50, { steps: 10 })
+    await page.mouse.up()
+
+    const afterMove = await page.evaluate(() => (window as any).polygonVertices)
+    expect(afterMove).toHaveLength(3)
+    expect(afterMove[0].x).toBeLessThan(70)
+    expect(afterMove[0].y).toBeLessThan(70)
+
+    await page.keyboard.press(`${modKey}+Z`)
+
+    const afterUndo = await page.evaluate(() => (window as any).polygonVertices)
+    expect(afterUndo).toHaveLength(3)
+    expect(afterUndo[0].x).toBeGreaterThan(90)
+    expect(afterUndo[0].x).toBeLessThan(110)
+    expect(afterUndo[0].y).toBeGreaterThan(90)
+    expect(afterUndo[0].y).toBeLessThan(110)
+  })
+
+  test('Cmd+Z undoes vertex delete', async () => {
+    await page.click('[data-testid="polygon-mode-btn"]')
+    await page.click('#clear-polygon-btn')
+
+    const canvas = page.locator('[data-testid="polygon-canvas"]')
+    await expect(canvas).toBeVisible()
+
+    await canvas.click({ position: { x: 100, y: 100 } })
+    await canvas.click({ position: { x: 200, y: 100 } })
+    await canvas.click({ position: { x: 250, y: 150 } })
+    await canvas.click({ position: { x: 150, y: 200 } })
+
+    const beforeDelete = await page.evaluate(() => (window as any).polygonVertices)
+    expect(beforeDelete).toHaveLength(4)
+
+    await canvas.click({ position: { x: 200, y: 100 } }) // select vertex 1
+    await page.keyboard.press('Delete')
+
+    const afterDelete = await page.evaluate(() => (window as any).polygonVertices)
+    expect(afterDelete).toHaveLength(3)
+
+    await page.keyboard.press(`${modKey}+Z`)
+
+    const afterUndo = await page.evaluate(() => (window as any).polygonVertices)
+    expect(afterUndo).toHaveLength(4)
+    expect(afterUndo[1].x).toBe(beforeDelete[1].x)
+    expect(afterUndo[1].y).toBe(beforeDelete[1].y)
+
+    await page.screenshot({ path: resolve(__dirname, '../../screenshots/3.5.png') })
+  })
+})

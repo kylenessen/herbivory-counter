@@ -5,15 +5,24 @@ export const CLOSE_DISTANCE_PX = 10
 const DRAG_START_THRESHOLD_PX = 2
 const DEFAULT_CURSOR = 'crosshair'
 
+type PolygonSnapshot = {
+  vertices: Point[]
+  closed: boolean
+}
+
 export class PolygonTool {
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
   private vertices: Point[] = []
   private closed = false
+  private undoStack: PolygonSnapshot[] = []
   private selectedIndex: number | null = null
   private dragCandidateIndex: number | null = null
   private draggingIndex: number | null = null
   private dragStartPos: Point | null = null
+  private pendingDragUndoSnapshot: PolygonSnapshot | null = null
+  private pendingDragVertexIndex: number | null = null
+  private pendingDragOriginalVertex: Point | null = null
   private suppressNextClick = false
   private onVerticesChanged: ((vertices: Point[]) => void) | null = null
   private onClosedChanged: ((closed: boolean) => void) | null = null
@@ -78,10 +87,14 @@ export class PolygonTool {
   public clear(): void {
     this.vertices = []
     this.closed = false
+    this.undoStack = []
     this.selectedIndex = null
     this.dragCandidateIndex = null
     this.draggingIndex = null
     this.dragStartPos = null
+    this.pendingDragUndoSnapshot = null
+    this.pendingDragVertexIndex = null
+    this.pendingDragOriginalVertex = null
     this.suppressNextClick = false
     this.setCursor(DEFAULT_CURSOR)
     this.onClosedChanged?.(this.closed)
@@ -113,6 +126,65 @@ export class PolygonTool {
     return -1
   }
 
+  private createSnapshot(): PolygonSnapshot {
+    return {
+      vertices: this.vertices.map((v) => ({ x: v.x, y: v.y })),
+      closed: this.closed
+    }
+  }
+
+  private pushUndoSnapshot(snapshot: PolygonSnapshot): void {
+    this.undoStack.push({
+      vertices: snapshot.vertices.map((v) => ({ x: v.x, y: v.y })),
+      closed: snapshot.closed
+    })
+  }
+
+  private restoreSnapshot(snapshot: PolygonSnapshot): void {
+    this.vertices = snapshot.vertices.map((v) => ({ x: v.x, y: v.y }))
+    this.closed = snapshot.closed
+    this.selectedIndex = null
+    this.dragCandidateIndex = null
+    this.draggingIndex = null
+    this.dragStartPos = null
+    this.pendingDragUndoSnapshot = null
+    this.pendingDragVertexIndex = null
+    this.pendingDragOriginalVertex = null
+    this.suppressNextClick = false
+    this.setCursor(DEFAULT_CURSOR)
+    this.onClosedChanged?.(this.closed)
+    this.onVerticesChanged?.(this.getVertices())
+  }
+
+  private undo(): void {
+    const snapshot = this.undoStack.pop()
+    if (!snapshot) return
+    this.restoreSnapshot(snapshot)
+  }
+
+  private commitPendingDragUndoSnapshot(): void {
+    if (!this.pendingDragUndoSnapshot) return
+    if (this.pendingDragVertexIndex === null || !this.pendingDragOriginalVertex) {
+      this.pendingDragUndoSnapshot = null
+      this.pendingDragVertexIndex = null
+      this.pendingDragOriginalVertex = null
+      return
+    }
+
+    const idx = this.pendingDragVertexIndex
+    const current = this.vertices[idx]
+    const original = this.pendingDragOriginalVertex
+    const moved = current && (current.x !== original.x || current.y !== original.y)
+
+    if (moved) {
+      this.pushUndoSnapshot(this.pendingDragUndoSnapshot)
+    }
+
+    this.pendingDragUndoSnapshot = null
+    this.pendingDragVertexIndex = null
+    this.pendingDragOriginalVertex = null
+  }
+
   private handleMouseDown(event: MouseEvent): void {
     this.canvas.focus()
     const pos = this.getMousePosition(event)
@@ -121,6 +193,9 @@ export class PolygonTool {
       this.selectedIndex = idx
       this.dragCandidateIndex = idx
       this.dragStartPos = pos
+      this.pendingDragUndoSnapshot = this.createSnapshot()
+      this.pendingDragVertexIndex = idx
+      this.pendingDragOriginalVertex = { x: this.vertices[idx].x, y: this.vertices[idx].y }
       this.setCursor('move')
       return
     }
@@ -128,6 +203,9 @@ export class PolygonTool {
     this.selectedIndex = null
     this.dragCandidateIndex = null
     this.dragStartPos = null
+    this.pendingDragUndoSnapshot = null
+    this.pendingDragVertexIndex = null
+    this.pendingDragOriginalVertex = null
   }
 
   private handleMouseMove(event: MouseEvent): void {
@@ -164,6 +242,7 @@ export class PolygonTool {
       this.draggingIndex = null
       this.dragCandidateIndex = null
       this.dragStartPos = null
+      this.commitPendingDragUndoSnapshot()
       this.suppressNextClick = true
       this.onVerticesChanged?.(this.getVertices())
       this.setCursor(DEFAULT_CURSOR)
@@ -172,6 +251,9 @@ export class PolygonTool {
 
     this.dragCandidateIndex = null
     this.dragStartPos = null
+    this.pendingDragUndoSnapshot = null
+    this.pendingDragVertexIndex = null
+    this.pendingDragOriginalVertex = null
   }
 
   private handleMouseLeave(_event: MouseEvent): void {
@@ -179,8 +261,12 @@ export class PolygonTool {
     this.dragStartPos = null
     if (this.draggingIndex !== null) {
       this.draggingIndex = null
+      this.commitPendingDragUndoSnapshot()
       this.onVerticesChanged?.(this.getVertices())
     }
+    this.pendingDragUndoSnapshot = null
+    this.pendingDragVertexIndex = null
+    this.pendingDragOriginalVertex = null
     this.setCursor(DEFAULT_CURSOR)
   }
 
@@ -192,6 +278,7 @@ export class PolygonTool {
     if (index < 0 || index >= this.vertices.length) return false
     if (!this.canDeleteVertex()) return false
 
+    this.pushUndoSnapshot(this.createSnapshot())
     this.vertices.splice(index, 1)
     this.selectedIndex = null
     this.dragCandidateIndex = null
@@ -214,6 +301,15 @@ export class PolygonTool {
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
+    const key = event.key.toLowerCase()
+    const isUndo = (event.metaKey || event.ctrlKey) && key === 'z' && !event.shiftKey
+    if (isUndo) {
+      if (this.canvas.style.pointerEvents === 'none') return
+      event.preventDefault()
+      this.undo()
+      return
+    }
+
     if (event.key !== 'Delete' && event.key !== 'Backspace') return
     if (this.selectedIndex === null) return
     if (this.canvas.style.pointerEvents === 'none') return
@@ -238,6 +334,7 @@ export class PolygonTool {
       const dy = pos.y - first.y
       const distSq = dx * dx + dy * dy
       if (distSq <= CLOSE_DISTANCE_PX * CLOSE_DISTANCE_PX) {
+        this.pushUndoSnapshot(this.createSnapshot())
         this.closed = true
         this.onClosedChanged?.(this.closed)
         this.onVerticesChanged?.(this.getVertices())
@@ -247,6 +344,7 @@ export class PolygonTool {
 
     if (this.findVertexIndexAtPosition(pos) !== -1) return
 
+    this.pushUndoSnapshot(this.createSnapshot())
     this.vertices.push(pos)
     this.onVerticesChanged?.(this.getVertices())
   }

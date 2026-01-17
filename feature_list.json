@@ -142,7 +142,7 @@
                 "Vertex is removed",
                 "Undo works for add, move, delete operations"
             ],
-            "passes": false
+            "passes": true
         },
         {
             "id": "3.6",
