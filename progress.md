@@ -159,14 +159,33 @@ This file tracks work completed by each agent session. Read this to understand p
 - Unit tests: 37 passing | E2E tests (polygon-tool.spec.ts): 10 passing
 - Commits: feat(polygon-tool): implement feature 3.6 - polygon deletion with confirmation
 
+### 2026-01-17 - Feature 3.7 Implementation Session
+- Implemented multi-polygon support allowing multiple leaves per image
+- Added PolygonState interface tracking id, leafId, vertices, and closed state
+- Added allPolygons array and activeLeafId to track multi-polygon state
+- Added "New Leaf" button that appears after closing a polygon
+- Added active leaf display showing "Leaf: 01", "Leaf: 02", etc.
+- Implemented sequential leaf ID generation (01, 02, 03, ...)
+- Added polygon selection by clicking inside inactive polygons 
+- Added isPointInPolygon ray-casting algorithm for click detection
+- Extended PolygonTool with onClickWhenClosed callback for selection
+- Inactive polygons render with dimmed gray color 
+- Updated persistCurrentPolygon to use active leaf ID
+- Updated restorePolygonForCurrentImage to restore all polygons
+- Wrote 5 E2E tests covering all acceptance criteria
+- Unit tests: 37 passing | E2E tests: 41 passing
+- Captured screenshot saved to screenshots/3.7.png
+- Marked feature 3.7 as passes: true in feature_list.json
+- Commits: feat(polygon-tool): implement feature 3.7 - multiple polygons per image
+
 ---
 
 ## Current State
 - Project: Initialized with electron-vite, TypeScript, SQLite
-- Features complete: 12 / 42
-- Last feature worked on: 3.5
+- Features complete: 13 / 42
+- Last feature worked on: 3.7
 - Known issues: Better-sqlite3 requires electron-rebuild before E2E tests, npm rebuild after for unit tests
 
 ## Next Priority
-Continue with Phase 3 polygon drawing:
-1. Task 3.6: Polygon Deletion - delete an entire polygon with confirmation
+Continue with Phase 4 Grid Overlay System:
+1. Task 4.1: Calculate Grid Size from Scale - compute grid cell size in pixels

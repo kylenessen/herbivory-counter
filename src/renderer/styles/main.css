@@ -455,3 +455,21 @@ h1 {
   font-size: 0.95rem;
   margin: 0;
 }
+
+/* Multi-polygon header */
+.polygon-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.active-leaf-display {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4ecca3;
+  padding: 0.4rem 0.8rem;
+  background: rgba(78, 204, 163, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(78, 204, 163, 0.3);
+}

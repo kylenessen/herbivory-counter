@@ -14,6 +14,14 @@ interface ImageInfo {
     completed: boolean
 }
 
+// Polygon state for multi-polygon support
+interface PolygonState {
+    id: number | null  // Database ID (null if not yet persisted)
+    leafId: string     // Sequential ID like "01", "02"
+    vertices: Point[]
+    closed: boolean
+}
+
 // State
 let currentImages: ImageInfo[] = []
 let currentFolderPath: string = ''
@@ -22,6 +30,10 @@ let currentPolygonTool: PolygonTool | null = null
 let currentImage: ImageInfo | null = null
 let currentToolMode: 'scale' | 'polygon' = 'scale'
 let currentPolygonDbId: number | null = null
+
+// Multi-polygon state
+let allPolygons: PolygonState[] = []
+let activeLeafId: string = '01'
 
 // Scale value interface for storing calculated scale
 interface ScaleValue {
@@ -37,12 +49,16 @@ declare global {
         scaleValue: ScaleValue | null
         polygonVertices: Point[]
         polygonClosed: boolean
+        allPolygons: PolygonState[]
+        activeLeafId: string
     }
 }
 window.scaleLine = null
 window.scaleValue = null
 window.polygonVertices = []
 window.polygonClosed = false
+window.allPolygons = []
+window.activeLeafId = '01'
 
 // Get DOM elements
 const openFolderBtn = document.getElementById('open-folder-btn')
@@ -148,7 +164,11 @@ function openImageViewer(image: ImageInfo): void {
                 </p>
             </div>
             <div class="polygon-section" id="polygon-section" style="display: none;">
-                <p data-testid="polygon-instruction" class="polygon-instruction">
+                <div class="polygon-header">
+                    <span data-testid="active-leaf-display" id="active-leaf-display" class="active-leaf-display">Leaf: 01</span>
+                    <button data-testid="new-leaf-btn" class="btn btn-primary" id="new-leaf-btn" style="display: none;">New Leaf</button>
+                </div>
+                <p data-testid="polygon-instruction" class="polygon-instruction" id="polygon-instruction">
                     Click on the image to add polygon vertices. Click near the first vertex to close the polygon.
                 </p>
                 <button class="btn btn-secondary" id="clear-polygon-btn">Clear Polygon</button>
@@ -217,6 +237,12 @@ function openImageViewer(image: ImageInfo): void {
     const polygonDeleteConfirmBtn = document.getElementById('polygon-delete-confirm-btn')
     polygonDeleteConfirmBtn?.addEventListener('click', () => {
         void confirmDeleteCurrentPolygon()
+    })
+
+    // New Leaf button handler - saves current polygon and starts a new one
+    const newLeafBtn = document.getElementById('new-leaf-btn')
+    newLeafBtn?.addEventListener('click', () => {
+        void startNewLeaf()
     })
 
     if (viewerImage && scaleCanvas && polygonCanvas) {
@@ -383,30 +409,57 @@ function initializePolygonTool(canvas: HTMLCanvasElement, image: HTMLImageElemen
         currentPolygonTool = null
     }
 
+    // Reset multi-polygon state
+    allPolygons = []
+    activeLeafId = '01'
+    currentPolygonDbId = null
+
+    // Update window state for E2E testing
     window.polygonVertices = []
     window.polygonClosed = false
-    currentPolygonDbId = null
+    window.allPolygons = allPolygons
+    window.activeLeafId = activeLeafId
+
+    // Update UI
+    updateLeafDisplay()
+    const instructionEl = document.getElementById('polygon-instruction')
+    const newLeafBtn = document.getElementById('new-leaf-btn')
+    if (instructionEl) instructionEl.style.display = 'block'
+    if (newLeafBtn) newLeafBtn.style.display = 'none'
 
     currentPolygonTool = new PolygonTool(canvas)
     currentPolygonTool.setOnVerticesChanged((vertices) => {
         window.polygonVertices = vertices
-        renderPolygonCanvasOnce()
+        // Update the active polygon in allPolygons
+        updateActivePolygonVertices(vertices)
+        renderAllPolygons()
     })
     currentPolygonTool.setOnClosedChanged((closed) => {
         window.polygonClosed = closed
-        renderPolygonCanvasOnce()
 
         if (closed) {
-            void persistCurrentPolygon()
+            // Persist and update UI for multi-polygon
+            void persistCurrentPolygon().then(() => {
+                // Show New Leaf button, hide instruction
+                const instructionEl = document.getElementById('polygon-instruction')
+                const newLeafBtn = document.getElementById('new-leaf-btn')
+                if (instructionEl) instructionEl.style.display = 'none'
+                if (newLeafBtn) newLeafBtn.style.display = 'inline-block'
+            })
         } else {
             currentPolygonDbId = null
         }
+        renderAllPolygons()
     })
     currentPolygonTool.setOnDeletePolygonRequested(() => {
         showPolygonDeleteDialog()
     })
+    currentPolygonTool.setOnClickWhenClosed((pos) => {
+        // Try to select another polygon when clicking while closed
+        return selectPolygonByClick(pos)
+    })
 
-    renderPolygonCanvasOnce()
+    renderAllPolygons()
 
     void restorePolygonForCurrentImage()
 }
@@ -420,6 +473,201 @@ function renderPolygonCanvasOnce(): void {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     currentPolygonTool?.render()
+}
+
+// Helper: Update the leaf ID display in the UI
+function updateLeafDisplay(): void {
+    const display = document.getElementById('active-leaf-display')
+    if (display) {
+        display.textContent = `Leaf: ${activeLeafId}`
+    }
+    window.activeLeafId = activeLeafId
+}
+
+// Helper: Update the vertices of the active polygon in allPolygons
+function updateActivePolygonVertices(vertices: Point[]): void {
+    const existingIdx = allPolygons.findIndex(p => p.leafId === activeLeafId)
+    if (existingIdx !== -1) {
+        allPolygons[existingIdx].vertices = [...vertices]
+    } else {
+        // Create new polygon entry
+        allPolygons.push({
+            id: null,
+            leafId: activeLeafId,
+            vertices: [...vertices],
+            closed: false
+        })
+    }
+    window.allPolygons = allPolygons
+}
+
+// Helper: Render all polygons (active and inactive)
+function renderAllPolygons(): void {
+    const canvas = document.getElementById('polygon-canvas') as HTMLCanvasElement | null
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+    // Draw inactive (closed) polygons first with dimmer colors
+    for (const poly of allPolygons) {
+        if (poly.leafId === activeLeafId) continue
+        if (poly.vertices.length < 2) continue
+        if (!poly.closed) continue
+
+        ctx.save()
+        ctx.beginPath()
+        ctx.moveTo(poly.vertices[0].x, poly.vertices[0].y)
+        for (let i = 1; i < poly.vertices.length; i++) {
+            ctx.lineTo(poly.vertices[i].x, poly.vertices[i].y)
+        }
+        ctx.closePath()
+        ctx.fillStyle = 'rgba(180, 180, 180, 0.2)'
+        ctx.fill()
+        ctx.strokeStyle = '#888888'
+        ctx.lineWidth = 2
+        ctx.stroke()
+        ctx.restore()
+    }
+
+    // Draw the active polygon using the PolygonTool
+    currentPolygonTool?.render()
+}
+
+// Helper: Get the next sequential leaf ID
+function getNextLeafId(): string {
+    if (allPolygons.length === 0) return '01'
+
+    // Find the highest existing leaf ID
+    let maxNum = 0
+    for (const poly of allPolygons) {
+        const num = parseInt(poly.leafId, 10)
+        if (!isNaN(num) && num > maxNum) {
+            maxNum = num
+        }
+    }
+
+    const nextNum = maxNum + 1
+    return nextNum.toString().padStart(2, '0')
+}
+
+// Start a new leaf polygon after closing the current one
+async function startNewLeaf(): Promise<void> {
+    if (!currentPolygonTool) return
+
+    // Save current polygon state to allPolygons
+    const currentVertices = currentPolygonTool.getVertices()
+    const currentClosed = currentPolygonTool.isClosed()
+
+    if (currentVertices.length >= 3 && currentClosed) {
+        const existingIdx = allPolygons.findIndex(p => p.leafId === activeLeafId)
+        if (existingIdx !== -1) {
+            allPolygons[existingIdx].vertices = [...currentVertices]
+            allPolygons[existingIdx].closed = true
+            allPolygons[existingIdx].id = currentPolygonDbId
+        }
+    }
+
+    // Generate next leaf ID
+    activeLeafId = getNextLeafId()
+    currentPolygonDbId = null
+
+    // Clear the polygon tool for new drawing
+    currentPolygonTool.clear()
+
+    // Update window state
+    window.polygonVertices = []
+    window.polygonClosed = false
+    window.allPolygons = allPolygons
+    window.activeLeafId = activeLeafId
+
+    // Update UI
+    updateLeafDisplay()
+    const instructionEl = document.getElementById('polygon-instruction')
+    const newLeafBtn = document.getElementById('new-leaf-btn')
+    if (instructionEl) instructionEl.style.display = 'block'
+    if (newLeafBtn) newLeafBtn.style.display = 'none'
+
+    renderAllPolygons()
+}
+
+// Check if a point is inside a polygon (ray casting algorithm)
+function isPointInPolygon(point: Point, vertices: Point[]): boolean {
+    if (vertices.length < 3) return false
+
+    let inside = false
+    const x = point.x
+    const y = point.y
+
+    for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+        const xi = vertices[i].x
+        const yi = vertices[i].y
+        const xj = vertices[j].x
+        const yj = vertices[j].y
+
+        if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+            inside = !inside
+        }
+    }
+
+    return inside
+}
+
+// Select a polygon by clicking inside it
+function selectPolygonByClick(clickPos: Point): boolean {
+    // Check all closed, inactive polygons
+    for (const poly of allPolygons) {
+        if (poly.leafId === activeLeafId) continue
+        if (!poly.closed || poly.vertices.length < 3) continue
+
+        if (isPointInPolygon(clickPos, poly.vertices)) {
+            // Save current polygon state before switching
+            if (currentPolygonTool) {
+                const currentVertices = currentPolygonTool.getVertices()
+                const currentClosed = currentPolygonTool.isClosed()
+                const existingIdx = allPolygons.findIndex(p => p.leafId === activeLeafId)
+                if (existingIdx !== -1 && currentVertices.length >= 3) {
+                    allPolygons[existingIdx].vertices = [...currentVertices]
+                    allPolygons[existingIdx].closed = currentClosed
+                    allPolygons[existingIdx].id = currentPolygonDbId
+                }
+            }
+
+            // Switch to the clicked polygon
+            activeLeafId = poly.leafId
+            currentPolygonDbId = poly.id
+
+            // Load the selected polygon into the tool
+            if (currentPolygonTool) {
+                currentPolygonTool.loadPolygon(poly.vertices, poly.closed)
+            }
+
+            // Update window state
+            window.polygonVertices = poly.vertices
+            window.polygonClosed = poly.closed
+            window.allPolygons = allPolygons
+            window.activeLeafId = activeLeafId
+
+            // Update UI
+            updateLeafDisplay()
+            const instructionEl = document.getElementById('polygon-instruction')
+            const newLeafBtn = document.getElementById('new-leaf-btn')
+            if (poly.closed) {
+                if (instructionEl) instructionEl.style.display = 'none'
+                if (newLeafBtn) newLeafBtn.style.display = 'inline-block'
+            } else {
+                if (instructionEl) instructionEl.style.display = 'block'
+                if (newLeafBtn) newLeafBtn.style.display = 'none'
+            }
+
+            renderAllPolygons()
+            return true
+        }
+    }
+
+    return false
 }
 
 function showPolygonDeleteDialog(): void {
@@ -436,17 +684,32 @@ function hidePolygonDeleteDialog(): void {
 }
 
 async function clearCurrentPolygon(): Promise<void> {
-    if (currentImage) {
-        const polygons = await window.electronAPI.getPolygonsForImage(currentImage.id)
-        if (polygons.success && polygons.polygons) {
-            for (const polygon of polygons.polygons) {
-                await window.electronAPI.deletePolygon(polygon.id)
-            }
-        }
+    // Delete the current polygon from DB if it was persisted
+    if (currentPolygonDbId) {
+        await window.electronAPI.deletePolygon(currentPolygonDbId)
     }
+
+    // Remove from allPolygons
+    const idx = allPolygons.findIndex(p => p.leafId === activeLeafId)
+    if (idx !== -1) {
+        allPolygons.splice(idx, 1)
+    }
+
     currentPolygonDbId = null
     currentPolygonTool?.clear()
-    renderPolygonCanvasOnce()
+
+    // Update window state
+    window.polygonVertices = []
+    window.polygonClosed = false
+    window.allPolygons = allPolygons
+
+    // Update UI
+    const instructionEl = document.getElementById('polygon-instruction')
+    const newLeafBtn = document.getElementById('new-leaf-btn')
+    if (instructionEl) instructionEl.style.display = 'block'
+    if (newLeafBtn) newLeafBtn.style.display = 'none'
+
+    renderAllPolygons()
 }
 
 async function confirmDeleteCurrentPolygon(): Promise<void> {
@@ -459,9 +722,24 @@ async function persistCurrentPolygon(): Promise<void> {
     const vertices = currentPolygonTool.getVertices()
     if (!currentPolygonTool.isClosed() || vertices.length < 3) return
 
-    const result = await window.electronAPI.upsertPolygon(currentImage.id, '01', vertices)
+    const result = await window.electronAPI.upsertPolygon(currentImage.id, activeLeafId, vertices)
     if (result.success && result.polygonId) {
         currentPolygonDbId = result.polygonId
+
+        // Update allPolygons with the persisted info
+        const existingIdx = allPolygons.findIndex(p => p.leafId === activeLeafId)
+        if (existingIdx !== -1) {
+            allPolygons[existingIdx].id = result.polygonId
+            allPolygons[existingIdx].closed = true
+        } else {
+            allPolygons.push({
+                id: result.polygonId,
+                leafId: activeLeafId,
+                vertices: [...vertices],
+                closed: true
+            })
+        }
+        window.allPolygons = allPolygons
     }
 }
 
@@ -471,9 +749,38 @@ async function restorePolygonForCurrentImage(): Promise<void> {
     const result = await window.electronAPI.getPolygonsForImage(currentImage.id)
     if (!result.success || !result.polygons || result.polygons.length === 0) return
 
-    const polygon = [...result.polygons].sort((a, b) => a.leafId.localeCompare(b.leafId))[0]
-    currentPolygonTool.loadPolygon(polygon.vertices, true)
-    currentPolygonDbId = polygon.id
+    // Restore all polygons to allPolygons array
+    allPolygons = result.polygons.map(p => ({
+        id: p.id,
+        leafId: p.leafId,
+        vertices: [...p.vertices],
+        closed: true  // All persisted polygons are closed
+    }))
+
+    // Sort by leafId and set the first one as active
+    allPolygons.sort((a, b) => a.leafId.localeCompare(b.leafId))
+
+    const firstPolygon = allPolygons[0]
+    activeLeafId = firstPolygon.leafId
+    currentPolygonDbId = firstPolygon.id
+
+    // Load the first polygon into the tool
+    currentPolygonTool.loadPolygon(firstPolygon.vertices, true)
+
+    // Update window state
+    window.polygonVertices = firstPolygon.vertices
+    window.polygonClosed = true
+    window.allPolygons = allPolygons
+    window.activeLeafId = activeLeafId
+
+    // Update UI for closed polygon state
+    updateLeafDisplay()
+    const instructionEl = document.getElementById('polygon-instruction')
+    const newLeafBtn = document.getElementById('new-leaf-btn')
+    if (instructionEl) instructionEl.style.display = 'none'
+    if (newLeafBtn) newLeafBtn.style.display = 'inline-block'
+
+    renderAllPolygons()
 }
 
 // Restore scale from database for the current image (Feature 2.3)

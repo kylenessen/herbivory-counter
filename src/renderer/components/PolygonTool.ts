@@ -27,6 +27,7 @@ export class PolygonTool {
   private onVerticesChanged: ((vertices: Point[]) => void) | null = null
   private onClosedChanged: ((closed: boolean) => void) | null = null
   private onDeletePolygonRequested: (() => void) | null = null
+  private onClickWhenClosed: ((pos: Point) => boolean) | null = null  // Returns true if click was handled
   private onClickBound: (event: MouseEvent) => void
   private onMouseDownBound: (event: MouseEvent) => void
   private onMouseMoveBound: (event: MouseEvent) => void
@@ -79,6 +80,10 @@ export class PolygonTool {
 
   public setOnDeletePolygonRequested(callback: () => void): void {
     this.onDeletePolygonRequested = callback
+  }
+
+  public setOnClickWhenClosed(callback: (pos: Point) => boolean): void {
+    this.onClickWhenClosed = callback
   }
 
   public getVertices(): Point[] {
@@ -351,9 +356,13 @@ export class PolygonTool {
       return
     }
 
-    if (this.closed) return
-
     const pos = this.getMousePosition(event)
+
+    if (this.closed) {
+      // Allow external code to handle click (e.g., polygon selection)
+      this.onClickWhenClosed?.(pos)
+      return
+    }
 
     if (this.vertices.length >= 3) {
       const first = this.vertices[0]
