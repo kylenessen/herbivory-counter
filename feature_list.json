@@ -1,6 +1,6 @@
 {
     "project": "Leaf Herbivory Counter",
-    "last_updated": "2026-01-16",
+    "last_updated": "2026-01-17",
     "features": [
         {
             "id": "1.1",
@@ -154,7 +154,7 @@
                 "Confirmation dialog appears",
                 "Polygon and associated cells are removed"
             ],
-            "passes": false
+            "passes": true
         },
         {
             "id": "3.7",

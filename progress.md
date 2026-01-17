@@ -150,6 +150,15 @@ This file tracks work completed by each agent session. Read this to understand p
 - Marked feature 3.5 as passes: true in feature_list.json
 - Commits: feat(polygon-tool): implement feature 3.5 - undo operations
 
+### 2026-01-17 - Feature 3.6 Implementation Session
+- Added polygon deletion UI with a "Delete Polygon" button and confirmation modal
+- Added Backspace/Delete shortcut to request polygon deletion (when no vertex selected)
+- Persisted closed polygons to SQLite and added IPC/preload APIs for polygon CRUD
+- Clearing/deleting polygon removes polygon and any associated cells from DB
+- Added Playwright E2E test for deletion confirmation and captured screenshot saved to screenshots/3.6.png
+- Unit tests: 37 passing | E2E tests (polygon-tool.spec.ts): 10 passing
+- Commits: feat(polygon-tool): implement feature 3.6 - polygon deletion with confirmation
+
 ---
 
 ## Current State

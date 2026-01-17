@@ -21,6 +21,7 @@ let currentScaleTool: ScaleTool | null = null
 let currentPolygonTool: PolygonTool | null = null
 let currentImage: ImageInfo | null = null
 let currentToolMode: 'scale' | 'polygon' = 'scale'
+let currentPolygonDbId: number | null = null
 
 // Scale value interface for storing calculated scale
 interface ScaleValue {
@@ -151,6 +152,7 @@ function openImageViewer(image: ImageInfo): void {
                     Click on the image to add polygon vertices. Click near the first vertex to close the polygon.
                 </p>
                 <button class="btn btn-secondary" id="clear-polygon-btn">Clear Polygon</button>
+                <button data-testid="polygon-delete-btn" class="btn btn-danger" id="delete-polygon-btn">Delete Polygon</button>
             </div>
         </div>
         <!-- Scale Input Dialog -->
@@ -165,6 +167,18 @@ function openImageViewer(image: ImageInfo): void {
                 <div class="dialog-buttons">
                     <button data-testid="cancel-scale-btn" class="btn btn-secondary" id="cancel-scale-dialog-btn">Cancel</button>
                     <button data-testid="confirm-scale-value-btn" class="btn btn-primary" id="confirm-scale-value-btn">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Polygon Delete Confirmation Dialog -->
+        <div data-testid="polygon-delete-dialog" class="scale-input-dialog" id="polygon-delete-dialog" style="display: none;">
+            <div class="dialog-content">
+                <h3>Delete Polygon?</h3>
+                <p>This will permanently delete the polygon and any associated classifications.</p>
+                <div class="dialog-buttons">
+                    <button data-testid="polygon-delete-cancel-btn" class="btn btn-secondary" id="polygon-delete-cancel-btn">Cancel</button>
+                    <button data-testid="polygon-delete-confirm-btn" class="btn btn-danger" id="polygon-delete-confirm-btn">Delete</button>
                 </div>
             </div>
         </div>
@@ -187,8 +201,22 @@ function openImageViewer(image: ImageInfo): void {
 
     const clearPolygonBtn = document.getElementById('clear-polygon-btn')
     clearPolygonBtn?.addEventListener('click', () => {
-        currentPolygonTool?.clear()
-        renderPolygonCanvasOnce()
+        void clearCurrentPolygon()
+    })
+
+    const deletePolygonBtn = document.getElementById('delete-polygon-btn')
+    deletePolygonBtn?.addEventListener('click', () => {
+        showPolygonDeleteDialog()
+    })
+
+    const polygonDeleteCancelBtn = document.getElementById('polygon-delete-cancel-btn')
+    polygonDeleteCancelBtn?.addEventListener('click', () => {
+        hidePolygonDeleteDialog()
+    })
+
+    const polygonDeleteConfirmBtn = document.getElementById('polygon-delete-confirm-btn')
+    polygonDeleteConfirmBtn?.addEventListener('click', () => {
+        void confirmDeleteCurrentPolygon()
     })
 
     if (viewerImage && scaleCanvas && polygonCanvas) {
@@ -357,6 +385,7 @@ function initializePolygonTool(canvas: HTMLCanvasElement, image: HTMLImageElemen
 
     window.polygonVertices = []
     window.polygonClosed = false
+    currentPolygonDbId = null
 
     currentPolygonTool = new PolygonTool(canvas)
     currentPolygonTool.setOnVerticesChanged((vertices) => {
@@ -366,9 +395,20 @@ function initializePolygonTool(canvas: HTMLCanvasElement, image: HTMLImageElemen
     currentPolygonTool.setOnClosedChanged((closed) => {
         window.polygonClosed = closed
         renderPolygonCanvasOnce()
+
+        if (closed) {
+            void persistCurrentPolygon()
+        } else {
+            currentPolygonDbId = null
+        }
+    })
+    currentPolygonTool.setOnDeletePolygonRequested(() => {
+        showPolygonDeleteDialog()
     })
 
     renderPolygonCanvasOnce()
+
+    void restorePolygonForCurrentImage()
 }
 
 function renderPolygonCanvasOnce(): void {
@@ -380,6 +420,60 @@ function renderPolygonCanvasOnce(): void {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     currentPolygonTool?.render()
+}
+
+function showPolygonDeleteDialog(): void {
+    if (!currentPolygonTool) return
+    if (currentPolygonTool.getVertices().length === 0) return
+
+    const dialog = document.getElementById('polygon-delete-dialog')
+    if (dialog) dialog.style.display = 'flex'
+}
+
+function hidePolygonDeleteDialog(): void {
+    const dialog = document.getElementById('polygon-delete-dialog')
+    if (dialog) dialog.style.display = 'none'
+}
+
+async function clearCurrentPolygon(): Promise<void> {
+    if (currentImage) {
+        const polygons = await window.electronAPI.getPolygonsForImage(currentImage.id)
+        if (polygons.success && polygons.polygons) {
+            for (const polygon of polygons.polygons) {
+                await window.electronAPI.deletePolygon(polygon.id)
+            }
+        }
+    }
+    currentPolygonDbId = null
+    currentPolygonTool?.clear()
+    renderPolygonCanvasOnce()
+}
+
+async function confirmDeleteCurrentPolygon(): Promise<void> {
+    hidePolygonDeleteDialog()
+    await clearCurrentPolygon()
+}
+
+async function persistCurrentPolygon(): Promise<void> {
+    if (!currentImage || !currentPolygonTool) return
+    const vertices = currentPolygonTool.getVertices()
+    if (!currentPolygonTool.isClosed() || vertices.length < 3) return
+
+    const result = await window.electronAPI.upsertPolygon(currentImage.id, '01', vertices)
+    if (result.success && result.polygonId) {
+        currentPolygonDbId = result.polygonId
+    }
+}
+
+async function restorePolygonForCurrentImage(): Promise<void> {
+    if (!currentImage || !currentPolygonTool) return
+
+    const result = await window.electronAPI.getPolygonsForImage(currentImage.id)
+    if (!result.success || !result.polygons || result.polygons.length === 0) return
+
+    const polygon = [...result.polygons].sort((a, b) => a.leafId.localeCompare(b.leafId))[0]
+    currentPolygonTool.loadPolygon(polygon.vertices, true)
+    currentPolygonDbId = polygon.id
 }
 
 // Restore scale from database for the current image (Feature 2.3)

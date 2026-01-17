@@ -250,6 +250,18 @@ h1 {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+.btn-danger {
+  background: linear-gradient(135deg, #ff6b6b 0%, #d64545 100%);
+  color: #1a1a2e;
+  border: 1px solid rgba(255, 107, 107, 0.4);
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, #ff8080 0%, #ff6b6b 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(255, 107, 107, 0.25);
+}
+
 /* Canvas container for scale drawing */
 .canvas-container {
   position: relative;

@@ -292,3 +292,42 @@ test.describe('Feature 3.5: Undo reverts polygon operations', () => {
     await page.screenshot({ path: resolve(__dirname, '../../screenshots/3.5.png') })
   })
 })
+
+test.describe('Feature 3.6: Polygon deletion', () => {
+  test('deleting polygon prompts for confirmation and clears polygon', async () => {
+    await page.click('[data-testid="polygon-mode-btn"]')
+    await page.click('#clear-polygon-btn')
+
+    const canvas = page.locator('[data-testid="polygon-canvas"]')
+    await expect(canvas).toBeVisible()
+
+    await canvas.click({ position: { x: 100, y: 100 } })
+    await canvas.click({ position: { x: 200, y: 100 } })
+    await canvas.click({ position: { x: 150, y: 200 } })
+    await canvas.click({ position: { x: 102, y: 98 } }) // close near first vertex
+
+    await expect(page.locator('[data-testid="polygon-delete-btn"]')).toBeVisible()
+
+    await page.click('[data-testid="polygon-delete-btn"]')
+    const dialog = page.locator('[data-testid="polygon-delete-dialog"]')
+    await expect(dialog).toBeVisible()
+
+    await page.click('[data-testid="polygon-delete-cancel-btn"]')
+    await expect(dialog).not.toBeVisible()
+
+    const stillClosed = await page.evaluate(() => (window as any).polygonClosed)
+    expect(stillClosed).toBe(true)
+
+    await page.click('[data-testid="polygon-delete-btn"]')
+    await expect(dialog).toBeVisible()
+    await page.click('[data-testid="polygon-delete-confirm-btn"]')
+    await expect(dialog).not.toBeVisible()
+
+    const verticesAfter = await page.evaluate(() => (window as any).polygonVertices)
+    expect(verticesAfter).toHaveLength(0)
+    const closedAfter = await page.evaluate(() => (window as any).polygonClosed)
+    expect(closedAfter).toBe(false)
+
+    await page.screenshot({ path: resolve(__dirname, '../../screenshots/3.6.png') })
+  })
+})

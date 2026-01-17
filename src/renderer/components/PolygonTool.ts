@@ -26,6 +26,7 @@ export class PolygonTool {
   private suppressNextClick = false
   private onVerticesChanged: ((vertices: Point[]) => void) | null = null
   private onClosedChanged: ((closed: boolean) => void) | null = null
+  private onDeletePolygonRequested: (() => void) | null = null
   private onClickBound: (event: MouseEvent) => void
   private onMouseDownBound: (event: MouseEvent) => void
   private onMouseMoveBound: (event: MouseEvent) => void
@@ -76,6 +77,10 @@ export class PolygonTool {
     this.onClosedChanged = callback
   }
 
+  public setOnDeletePolygonRequested(callback: () => void): void {
+    this.onDeletePolygonRequested = callback
+  }
+
   public getVertices(): Point[] {
     return [...this.vertices]
   }
@@ -87,6 +92,23 @@ export class PolygonTool {
   public clear(): void {
     this.vertices = []
     this.closed = false
+    this.undoStack = []
+    this.selectedIndex = null
+    this.dragCandidateIndex = null
+    this.draggingIndex = null
+    this.dragStartPos = null
+    this.pendingDragUndoSnapshot = null
+    this.pendingDragVertexIndex = null
+    this.pendingDragOriginalVertex = null
+    this.suppressNextClick = false
+    this.setCursor(DEFAULT_CURSOR)
+    this.onClosedChanged?.(this.closed)
+    this.onVerticesChanged?.(this.getVertices())
+  }
+
+  public loadPolygon(vertices: Point[], closed: boolean): void {
+    this.vertices = vertices.map((v) => ({ x: v.x, y: v.y }))
+    this.closed = closed
     this.undoStack = []
     this.selectedIndex = null
     this.dragCandidateIndex = null
@@ -311,11 +333,16 @@ export class PolygonTool {
     }
 
     if (event.key !== 'Delete' && event.key !== 'Backspace') return
-    if (this.selectedIndex === null) return
     if (this.canvas.style.pointerEvents === 'none') return
 
     event.preventDefault()
-    this.deleteVertex(this.selectedIndex)
+    if (this.selectedIndex !== null) {
+      this.deleteVertex(this.selectedIndex)
+      return
+    }
+
+    if (this.vertices.length === 0) return
+    this.onDeletePolygonRequested?.()
   }
 
   private handleClick(event: MouseEvent): void {

@@ -44,6 +44,35 @@ export interface GetScaleResult {
   scale?: ScaleData | null
 }
 
+export interface Vertex {
+  x: number
+  y: number
+}
+
+export interface PolygonInfo {
+  id: number
+  imageId: number
+  leafId: string
+  vertices: Vertex[]
+}
+
+export interface GetPolygonsResult {
+  success: boolean
+  error?: string
+  polygons?: PolygonInfo[]
+}
+
+export interface UpsertPolygonResult {
+  success: boolean
+  error?: string
+  polygonId?: number
+}
+
+export interface DeletePolygonResult {
+  success: boolean
+  error?: string
+}
+
 // Expose protected methods to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
   // Get Electron version
@@ -70,7 +99,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Clear scale calibration data for an image
   clearImageScale: (imageId: number): Promise<SaveScaleResult> =>
-    ipcRenderer.invoke('image:clearScale', imageId)
+    ipcRenderer.invoke('image:clearScale', imageId),
+
+  // Get polygons for an image
+  getPolygonsForImage: (imageId: number): Promise<GetPolygonsResult> =>
+    ipcRenderer.invoke('polygon:getForImage', imageId),
+
+  // Insert or update a polygon
+  upsertPolygon: (imageId: number, leafId: string, vertices: Vertex[]): Promise<UpsertPolygonResult> =>
+    ipcRenderer.invoke('polygon:upsert', imageId, leafId, vertices),
+
+  // Delete a polygon (also deletes associated cells via cascade)
+  deletePolygon: (polygonId: number): Promise<DeletePolygonResult> =>
+    ipcRenderer.invoke('polygon:delete', polygonId)
 })
 
 // Type declaration for window.electronAPI
@@ -84,6 +125,9 @@ declare global {
       saveImageScale: (imageId: number, scale: ScaleData) => Promise<SaveScaleResult>
       getImageScale: (imageId: number) => Promise<GetScaleResult>
       clearImageScale: (imageId: number) => Promise<SaveScaleResult>
+      getPolygonsForImage: (imageId: number) => Promise<GetPolygonsResult>
+      upsertPolygon: (imageId: number, leafId: string, vertices: Vertex[]) => Promise<UpsertPolygonResult>
+      deletePolygon: (polygonId: number) => Promise<DeletePolygonResult>
     }
   }
 }

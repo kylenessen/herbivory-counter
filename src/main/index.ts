@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { join } from 'path'
 import { existsSync, readdirSync } from 'fs'
-import { Database, initDatabase, ScaleData } from './database'
+import { Database, initDatabase, ScaleData, Vertex } from './database'
 
 let mainWindow: BrowserWindow | null = null
 let currentDatabase: Database | null = null
@@ -147,6 +147,61 @@ ipcMain.handle('image:clearScale', async (_, imageId: number) => {
   }
   try {
     currentDatabase.clearImageScale(imageId)
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+})
+
+ipcMain.handle('polygon:getForImage', async (_, imageId: number) => {
+  if (!currentDatabase) {
+    return { success: false, error: 'No database open' }
+  }
+  try {
+    const polygons = currentDatabase.getPolygonsForImage(imageId).map((p) => ({
+      id: p.id,
+      imageId: p.image_id,
+      leafId: p.leaf_id,
+      vertices: JSON.parse(p.vertices) as Vertex[]
+    }))
+    return { success: true, polygons }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+})
+
+ipcMain.handle('polygon:upsert', async (_, imageId: number, leafId: string, vertices: Vertex[]) => {
+  if (!currentDatabase) {
+    return { success: false, error: 'No database open' }
+  }
+  try {
+    const existing = currentDatabase.getPolygonsForImage(imageId).find((p) => p.leaf_id === leafId)
+    if (existing) {
+      currentDatabase.updatePolygonVertices(existing.id, vertices)
+      return { success: true, polygonId: existing.id }
+    }
+    const polygonId = currentDatabase.insertPolygon(imageId, leafId, vertices)
+    return { success: true, polygonId }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+})
+
+ipcMain.handle('polygon:delete', async (_, polygonId: number) => {
+  if (!currentDatabase) {
+    return { success: false, error: 'No database open' }
+  }
+  try {
+    currentDatabase.deletePolygon(polygonId)
     return { success: true }
   } catch (error) {
     return {
