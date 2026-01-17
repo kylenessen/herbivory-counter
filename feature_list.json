@@ -177,7 +177,7 @@
                 "Set grid size (e.g., 1 mm)",
                 "Grid cells display at correct pixel size (4.5 px)"
             ],
-            "passes": false
+            "passes": true
         },
         {
             "id": "4.2",

@@ -473,3 +473,57 @@ h1 {
   border-radius: 6px;
   border: 1px solid rgba(78, 204, 163, 0.3);
 }
+
+/* Grid controls (Feature 4.1) */
+.grid-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 0;
+  margin-top: 0.5rem;
+  border-top: 1px solid #2a2a4a;
+}
+
+.grid-size-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.grid-size-row label {
+  color: #aaa;
+  font-size: 0.9rem;
+}
+
+.grid-size-row input {
+  width: 70px;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.95rem;
+  background: #0f0f1a;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  color: #eaeaea;
+  text-align: center;
+}
+
+.grid-size-row input:focus {
+  outline: none;
+  border-color: #4ecca3;
+  box-shadow: 0 0 0 2px rgba(78, 204, 163, 0.2);
+}
+
+.grid-size-row span {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.grid-cell-size-display {
+  color: #4ecca3;
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin: 0;
+  padding: 0.4rem 0.8rem;
+  background: rgba(78, 204, 163, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(78, 204, 163, 0.3);
+}

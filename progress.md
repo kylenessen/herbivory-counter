@@ -178,14 +178,30 @@ This file tracks work completed by each agent session. Read this to understand p
 - Marked feature 3.7 as passes: true in feature_list.json
 - Commits: feat(polygon-tool): implement feature 3.7 - multiple polygons per image
 
+### 2026-01-17 - Feature 4.1 Implementation Session
+- Implemented GridOverlay component with calculateCellSize function
+- Formula: cellSizePx = (pxPerCm / 10) * gridSizeMm
+- Added grid size input UI to polygon section (default: 1 mm)
+- Added cell size display showing calculated pixel value
+- Grid state updates when: scale confirmed, mode switched, grid size changed
+- Added validateGridSize with practical limits (0.1mm to 100mm)
+- Exposed gridState to window object for E2E testing
+- Added CSS styles for grid controls UI
+- Wrote 12 unit tests for grid calculation functions (all passing)
+- Wrote 8 E2E tests for grid UI and state management (all passing)
+- Unit tests: 49 passing | E2E tests: 49 passing
+- Captured screenshot saved to screenshots/4.1.png
+- Marked feature 4.1 as passes: true in feature_list.json
+- Commits: feat(grid-overlay): implement feature 4.1 - grid cell size from scale
+
 ---
 
 ## Current State
 - Project: Initialized with electron-vite, TypeScript, SQLite
-- Features complete: 13 / 42
-- Last feature worked on: 3.7
+- Features complete: 14 / 42
+- Last feature worked on: 4.1
 - Known issues: Better-sqlite3 requires electron-rebuild before E2E tests, npm rebuild after for unit tests
 
 ## Next Priority
 Continue with Phase 4 Grid Overlay System:
-1. Task 4.1: Calculate Grid Size from Scale - compute grid cell size in pixels
+1. Task 4.2: Render Grid Overlay inside polygon only

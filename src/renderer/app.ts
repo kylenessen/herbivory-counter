@@ -2,6 +2,7 @@
 import { ScaleTool, ScaleLine, calculateLineLength, calculateScale } from './components/ScaleTool'
 import { PolygonTool } from './components/PolygonTool'
 import { Point } from '../shared/types'
+import { calculateCellSize, getDefaultGridSizeMm, validateGridSize, GridState, createGridState } from './components/GridOverlay'
 
 console.log('Herbivory Counter initialized')
 
@@ -35,6 +36,9 @@ let currentPolygonDbId: number | null = null
 let allPolygons: PolygonState[] = []
 let activeLeafId: string = '01'
 
+// Grid overlay state (Feature 4.1)
+let currentGridState: GridState = createGridState()
+
 // Scale value interface for storing calculated scale
 interface ScaleValue {
     pxPerCm: number
@@ -51,6 +55,7 @@ declare global {
         polygonClosed: boolean
         allPolygons: PolygonState[]
         activeLeafId: string
+        gridState: GridState
     }
 }
 window.scaleLine = null
@@ -59,6 +64,7 @@ window.polygonVertices = []
 window.polygonClosed = false
 window.allPolygons = []
 window.activeLeafId = '01'
+window.gridState = createGridState()
 
 // Get DOM elements
 const openFolderBtn = document.getElementById('open-folder-btn')
@@ -173,6 +179,16 @@ function openImageViewer(image: ImageInfo): void {
                 </p>
                 <button class="btn btn-secondary" id="clear-polygon-btn">Clear Polygon</button>
                 <button data-testid="polygon-delete-btn" class="btn btn-danger" id="delete-polygon-btn">Delete Polygon</button>
+                <div class="grid-controls" id="grid-controls">
+                    <div class="grid-size-row">
+                        <label for="grid-size-input">Grid Size:</label>
+                        <input type="number" data-testid="grid-size-input" id="grid-size-input" value="1" min="0.1" max="100" step="0.1" />
+                        <span>mm</span>
+                    </div>
+                    <p data-testid="grid-cell-size-display" class="grid-cell-size-display" id="grid-cell-size-display">
+                        Cell size: <span id="grid-cell-size-value">0</span> px
+                    </p>
+                </div>
             </div>
         </div>
         <!-- Scale Input Dialog -->
@@ -245,6 +261,15 @@ function openImageViewer(image: ImageInfo): void {
         void startNewLeaf()
     })
 
+    // Grid size input handler (Feature 4.1)
+    const gridSizeInput = document.getElementById('grid-size-input') as HTMLInputElement
+    gridSizeInput?.addEventListener('change', () => {
+        updateGridState()
+    })
+    gridSizeInput?.addEventListener('blur', () => {
+        updateGridState()
+    })
+
     if (viewerImage && scaleCanvas && polygonCanvas) {
         viewerImage.onload = () => {
             initializeScaleTool(scaleCanvas, viewerImage)
@@ -288,6 +313,11 @@ function setToolMode(mode: 'scale' | 'polygon'): void {
 
     scaleModeBtn?.classList.toggle('active', mode === 'scale')
     polygonModeBtn?.classList.toggle('active', mode === 'polygon')
+
+    // Update grid state when switching to polygon mode (Feature 4.1)
+    if (mode === 'polygon') {
+        updateGridState()
+    }
 }
 
 // Initialize the scale tool for line drawing
@@ -398,6 +428,9 @@ function initializeScaleTool(canvas: HTMLCanvasElement, image: HTMLImageElement)
         if (dialog) dialog.style.display = 'none'
         if (scalePxValue) scalePxValue.textContent = pxPerCm.toFixed(1)
         if (scaleDisplay) scaleDisplay.style.display = 'block'
+
+        // Update grid state with new scale (Feature 4.1)
+        updateGridState()
     })
 }
 
@@ -482,6 +515,39 @@ function updateLeafDisplay(): void {
         display.textContent = `Leaf: ${activeLeafId}`
     }
     window.activeLeafId = activeLeafId
+}
+
+// Helper: Update the grid state and display (Feature 4.1)
+function updateGridState(): void {
+    const gridSizeInput = document.getElementById('grid-size-input') as HTMLInputElement
+    const cellSizeValue = document.getElementById('grid-cell-size-value')
+
+    if (!gridSizeInput) return
+
+    let gridSizeMm = parseFloat(gridSizeInput.value)
+
+    // Validate and correct the input
+    if (!validateGridSize(gridSizeMm)) {
+        // Reset to default if invalid
+        gridSizeMm = getDefaultGridSizeMm()
+        gridSizeInput.value = gridSizeMm.toString()
+    }
+
+    // Get current scale (px per cm)
+    const pxPerCm = window.scaleValue?.pxPerCm || 0
+
+    // Calculate cell size in pixels
+    const cellSizePx = calculateCellSize(pxPerCm, gridSizeMm)
+
+    // Update state
+    currentGridState.gridSizeMm = gridSizeMm
+    currentGridState.cellSizePx = cellSizePx
+    window.gridState = currentGridState
+
+    // Update display
+    if (cellSizeValue) {
+        cellSizeValue.textContent = cellSizePx > 0 ? cellSizePx.toFixed(1) : '0'
+    }
 }
 
 // Helper: Update the vertices of the active polygon in allPolygons
@@ -815,6 +881,9 @@ async function restoreScaleForCurrentImage(): Promise<void> {
     const scalePxValue = document.getElementById('scale-px-value')
     if (scalePxValue) scalePxValue.textContent = scale.pxPerCm.toFixed(1)
     if (scaleDisplay) scaleDisplay.style.display = 'block'
+
+    // Update grid state with restored scale (Feature 4.1)
+    updateGridState()
 }
 
 // Update scale UI based on line state
