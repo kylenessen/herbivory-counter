@@ -2,7 +2,7 @@
 import { ScaleTool, ScaleLine, calculateLineLength, calculateScale } from './components/ScaleTool'
 import { PolygonTool } from './components/PolygonTool'
 import { Point } from '../shared/types'
-import { calculateCellSize, getDefaultGridSizeMm, validateGridSize, GridState, createGridState } from './components/GridOverlay'
+import { calculateCellSize, getDefaultGridSizeMm, validateGridSize, GridState, createGridState, generateGridCells, renderGrid } from './components/GridOverlay'
 
 console.log('Herbivory Counter initialized')
 
@@ -266,6 +266,9 @@ function openImageViewer(image: ImageInfo): void {
     gridSizeInput?.addEventListener('change', () => {
         updateGridState()
     })
+    gridSizeInput?.addEventListener('input', () => {
+        updateGridState()
+    })
     gridSizeInput?.addEventListener('blur', () => {
         updateGridState()
     })
@@ -470,6 +473,13 @@ function initializePolygonTool(canvas: HTMLCanvasElement, image: HTMLImageElemen
     currentPolygonTool.setOnClosedChanged((closed) => {
         window.polygonClosed = closed
 
+        // Update closed state in allPolygons
+        const existingIdx = allPolygons.findIndex(p => p.leafId === activeLeafId)
+        if (existingIdx !== -1) {
+            allPolygons[existingIdx].closed = closed
+            window.allPolygons = allPolygons
+        }
+
         if (closed) {
             // Persist and update UI for multi-polygon
             void persistCurrentPolygon().then(() => {
@@ -479,8 +489,12 @@ function initializePolygonTool(canvas: HTMLCanvasElement, image: HTMLImageElemen
                 if (instructionEl) instructionEl.style.display = 'none'
                 if (newLeafBtn) newLeafBtn.style.display = 'inline-block'
             })
+            // Update grid state to generate cells (Feature 4.2)
+            updateGridState()
         } else {
             currentPolygonDbId = null
+            // Clear grid when polygon is not closed
+            updateGridState()
         }
         renderAllPolygons()
     })
@@ -517,7 +531,7 @@ function updateLeafDisplay(): void {
     window.activeLeafId = activeLeafId
 }
 
-// Helper: Update the grid state and display (Feature 4.1)
+// Helper: Update the grid state and display (Feature 4.1 and 4.2)
 function updateGridState(): void {
     const gridSizeInput = document.getElementById('grid-size-input') as HTMLInputElement
     const cellSizeValue = document.getElementById('grid-cell-size-value')
@@ -542,12 +556,29 @@ function updateGridState(): void {
     // Update state
     currentGridState.gridSizeMm = gridSizeMm
     currentGridState.cellSizePx = cellSizePx
+
+    // Feature 4.2: Generate grid cells if polygon is closed
+    const activePolygon = allPolygons.find(p => p.leafId === activeLeafId)
+    const isPolygonClosed = activePolygon?.closed || window.polygonClosed
+
+    if (isPolygonClosed && cellSizePx > 0) {
+        const vertices = activePolygon?.vertices || window.polygonVertices
+        currentGridState.cells = generateGridCells(vertices, cellSizePx)
+        currentGridState.isVisible = true
+    } else {
+        currentGridState.cells = []
+        currentGridState.isVisible = false
+    }
+
     window.gridState = currentGridState
 
     // Update display
     if (cellSizeValue) {
         cellSizeValue.textContent = cellSizePx > 0 ? cellSizePx.toFixed(1) : '0'
     }
+
+    // Re-render polygons to show/hide grid
+    renderAllPolygons()
 }
 
 // Helper: Update the vertices of the active polygon in allPolygons
@@ -600,6 +631,16 @@ function renderAllPolygons(): void {
 
     // Draw the active polygon using the PolygonTool
     currentPolygonTool?.render()
+
+    // Feature 4.2: Render grid overlay for active closed polygon
+    if (currentGridState.isVisible && currentGridState.cells.length > 0) {
+        const activePolygon = allPolygons.find(p => p.leafId === activeLeafId)
+        const vertices = activePolygon?.vertices || window.polygonVertices
+
+        if (vertices.length >= 3) {
+            renderGrid(ctx, currentGridState.cells, vertices)
+        }
+    }
 }
 
 // Helper: Get the next sequential leaf ID
@@ -728,6 +769,9 @@ function selectPolygonByClick(clickPos: Point): boolean {
                 if (newLeafBtn) newLeafBtn.style.display = 'none'
             }
 
+            // Update grid state for selected polygon (Feature 4.2)
+            updateGridState()
+
             renderAllPolygons()
             return true
         }
@@ -845,6 +889,9 @@ async function restorePolygonForCurrentImage(): Promise<void> {
     const newLeafBtn = document.getElementById('new-leaf-btn')
     if (instructionEl) instructionEl.style.display = 'none'
     if (newLeafBtn) newLeafBtn.style.display = 'inline-block'
+
+    // Update grid state for restored polygon (Feature 4.2)
+    updateGridState()
 
     renderAllPolygons()
 }

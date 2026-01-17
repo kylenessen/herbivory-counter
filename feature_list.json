@@ -189,7 +189,7 @@
                 "Grid appears only within leaf boundary",
                 "Cells outside polygon are not rendered"
             ],
-            "passes": false
+            "passes": true
         },
         {
             "id": "4.3",
